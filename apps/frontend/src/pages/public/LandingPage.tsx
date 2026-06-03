@@ -116,7 +116,7 @@ function Navbar() {
         {/* Links */}
         <div className="hidden md:flex items-center gap-1">
           {['Solução', 'Blockchain', 'Funcionalidades', 'Segurança'].map((item) => (
-            
+            <a
               key={item}
               href={`#${item.toLowerCase()}`}
               className="px-4 py-2 rounded-lg text-sm text-grafite-400
@@ -217,7 +217,7 @@ function HeroSection() {
             >
               Acessar Sistema <ArrowRight size={18} />
             </Link>
-            
+            <a
               href="#solução"
               className="flex items-center gap-2 px-7 py-4 rounded-xl font-semibold text-base
                          border border-grafite-700 text-grafite-300
