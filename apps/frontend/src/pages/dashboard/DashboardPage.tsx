@@ -372,7 +372,7 @@ export default function DashboardPage() {
             { label: 'Integridade', valor: '100%', cor: 'text-success-400' },
           ].map((item) => (
             <div key={item.label}
-              className="bg-grafite-50 dark:bg-grafite-800/50 rounded-xl p-4 text-center">
+              className="bg-grafite-800/40 rounded-xl p-4 text-center">
               <p className={`text-2xl font-bold ${item.cor}`}>{item.valor}</p>
               <p className="text-xs text-grafite-500 mt-1">{item.label}</p>
             </div>

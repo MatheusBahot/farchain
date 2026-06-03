@@ -4,17 +4,24 @@ import { persist } from 'zustand/middleware';
 interface ThemeState {
   darkMode: boolean;
   toggleDarkMode: () => void;
-  setDarkMode: (value: boolean) => void;
+  setDarkMode: (v: boolean) => void;
 }
 
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set) => ({
-      darkMode: true, // FarChain padrão: dark mode
-
-      toggleDarkMode: () => set((state) => ({ darkMode: !state.darkMode })),
-      setDarkMode: (value) => set({ darkMode: value }),
+      darkMode: true,
+      toggleDarkMode: () => set((s) => ({ darkMode: !s.darkMode })),
+      setDarkMode: (v) => set({ darkMode: v }),
     }),
-    { name: 'farchain-theme' },
+    {
+      name: 'farchain-theme',
+      // Sempre iniciar com dark: true se não houver preferência salva
+      onRehydrateStorage: () => (state) => {
+        if (state && state.darkMode === undefined) {
+          state.darkMode = true;
+        }
+      },
+    },
   ),
 );
