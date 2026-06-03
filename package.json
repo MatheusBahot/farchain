@@ -1,6 +1,7 @@
 {
   "name": "farchain",
   "version": "1.0.0",
+  "packageManager": "pnpm@9.15.9",
   "private": true,
   "description": "FarChain - Plataforma de Rastreabilidade Farmacêutica Baseada em Blockchain",
   "scripts": {
