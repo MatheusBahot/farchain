@@ -2,7 +2,7 @@
 // Plataforma de Rastreabilidade Farmacêutica CEAF/SUS
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
   previewFeatures = ["fullTextSearch"]
 }
 
@@ -121,20 +121,20 @@ model Usuario {
   mfaSecret        String?
   avatarUrl        String?
   telefone         String?
-  crfNumero        String?   // Registro CRF para farmacêuticos
+  crfNumero        String? // Registro CRF para farmacêuticos
   unidadeId        String?
   ultimoLogin      DateTime?
   refreshTokenHash String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
-  unidade          UnidadeSaude?     @relation(fields: [unidadeId], references: [id])
-  movimentacoes    Movimentacao[]
-  dispensacoes     Dispensacao[]
-  auditLogs        AuditLog[]
-  eventosBlockchain EventoBlockchain[]
+  unidade            UnidadeSaude?       @relation(fields: [unidadeId], references: [id])
+  movimentacoes      Movimentacao[]
+  dispensacoes       Dispensacao[]
+  auditLogs          AuditLog[]
+  eventosBlockchain  EventoBlockchain[]
   farmacovigilancias FarmacoVigilancia[]
-  alertas          Alerta[]
+  alertas            Alerta[]
 
   @@map("usuarios")
 }
@@ -144,53 +144,53 @@ model Usuario {
 // ============================================================
 
 model DistritoSanitario {
-  id           String   @id @default(uuid())
-  codigo       String   @unique
-  nome         String
-  municipio    String   @default("Salvador")
-  uf           String   @default("BA")
-  populacao    Int?
-  area         Float?
-  responsavel  String?
-  telefone     String?
-  email        String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id          String   @id @default(uuid())
+  codigo      String   @unique
+  nome        String
+  municipio   String   @default("Salvador")
+  uf          String   @default("BA")
+  populacao   Int?
+  area        Float?
+  responsavel String?
+  telefone    String?
+  email       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  unidades     UnidadeSaude[]
+  unidades UnidadeSaude[]
 
   @@map("distritos_sanitarios")
 }
 
 model UnidadeSaude {
-  id               String   @id @default(uuid())
-  cnes             String?  @unique
-  nome             String
-  tipo             String   // CAF, UBS, Hospital, Policlínica, etc.
-  cnpj             String?
-  telefone         String?
-  email            String?
-  logradouro       String?
-  numero           String?
-  complemento      String?
-  bairro           String?
-  municipio        String?
-  uf               String?
-  cep              String?
-  latitude         Float?
-  longitude        Float?
-  ehCAF            Boolean  @default(false)
-  distritoId       String?
-  ativo            Boolean  @default(true)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id          String   @id @default(uuid())
+  cnes        String?  @unique
+  nome        String
+  tipo        String // CAF, UBS, Hospital, Policlínica, etc.
+  cnpj        String?
+  telefone    String?
+  email       String?
+  logradouro  String?
+  numero      String?
+  complemento String?
+  bairro      String?
+  municipio   String?
+  uf          String?
+  cep         String?
+  latitude    Float?
+  longitude   Float?
+  ehCAF       Boolean  @default(false)
+  distritoId  String?
+  ativo       Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  distrito         DistritoSanitario? @relation(fields: [distritoId], references: [id])
-  usuarios         Usuario[]
-  estoque          EstoqueLote[]
-  movimentacoesOrigem  Movimentacao[] @relation("MovOrigem")
-  movimentacoesDestino Movimentacao[] @relation("MovDestino")
-  dispensacoes     Dispensacao[]
+  distrito             DistritoSanitario? @relation(fields: [distritoId], references: [id])
+  usuarios             Usuario[]
+  estoque              EstoqueLote[]
+  movimentacoesOrigem  Movimentacao[]     @relation("MovOrigem")
+  movimentacoesDestino Movimentacao[]     @relation("MovDestino")
+  dispensacoes         Dispensacao[]
 
   @@map("unidades_saude")
 }
@@ -200,37 +200,37 @@ model UnidadeSaude {
 // ============================================================
 
 model Medicamento {
-  id                    String          @id @default(uuid())
-  dcb                   String          // Denominação Comum Brasileira
-  nomeComercial         String?
-  principioAtivo        String
-  fabricante            String
-  distribuidor          String?
-  registroSanitario     String?         // Registro ANVISA
-  classeTerapeutica     String
-  subclasse             String?
-  formaFarmaceutica     FormaFarmaceutica
-  concentracao          String
-  apresentacao          String          // ex: "30 comprimidos"
-  viaAdministracao      String?
-  classeCEAF            ClasseCEAF
-  protocoloClinico      String?
-  cid10                 String?         // CIDs indicados
-  gtin                  String?         // Global Trade Item Number
-  codigoEAN             String?
-  temperaturaMin        Float?          // °C
-  temperaturaMax        Float?          // °C
-  requireCadeiaFria     Boolean         @default(false)
+  id                     String            @id @default(uuid())
+  dcb                    String // Denominação Comum Brasileira
+  nomeComercial          String?
+  principioAtivo         String
+  fabricante             String
+  distribuidor           String?
+  registroSanitario      String?           @unique // Registro ANVISA
+  classeTerapeutica      String
+  subclasse              String?
+  formaFarmaceutica      FormaFarmaceutica
+  concentracao           String
+  apresentacao           String // ex: "30 comprimidos"
+  viaAdministracao       String?
+  classeCEAF             ClasseCEAF
+  protocoloClinico       String?
+  cid10                  String? // CIDs indicados
+  gtin                   String? // Global Trade Item Number
+  codigoEAN              String?
+  temperaturaMin         Float? // °C
+  temperaturaMax         Float? // °C
+  requireCadeiaFria      Boolean           @default(false)
   condicoesArmazenamento String?
-  custoCentral          Float?          // R$ custo médio RENAME
-  ativo                 Boolean         @default(true)
-  observacoes           String?
-  bula                  String?
-  createdAt             DateTime        @default(now())
-  updatedAt             DateTime        @updatedAt
+  custoCentral           Float? // R$ custo médio RENAME
+  ativo                  Boolean           @default(true)
+  observacoes            String?
+  bula                   String?
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
 
-  lotes                 Lote[]
-  dispensacoes          Dispensacao[]
+  lotes        Lote[]
+  dispensacoes Dispensacao[]
 
   @@map("medicamentos")
 }
@@ -240,26 +240,26 @@ model Medicamento {
 // ============================================================
 
 model Lote {
-  id                 String     @id @default(uuid())
-  identificadorUnico String     @unique @default(uuid()) // UUID global do lote
-  numeroLote         String
-  medicamentoId      String
-  fabricante         String
-  dataFabricacao     DateTime
-  dataValidade       DateTime
+  id                  String     @id @default(uuid())
+  identificadorUnico  String     @unique @default(uuid()) // UUID global do lote
+  numeroLote          String
+  medicamentoId       String
+  fabricante          String
+  dataFabricacao      DateTime
+  dataValidade        DateTime
   quantidadeProduzida Int
   quantidadeRecebida  Int
-  qrCodeUrl          String?
-  qrCodeHash         String?
-  statusSanitario    StatusLote @default(ATIVO)
-  hashCriptografico  String     @unique
-  notaFiscal         String?
-  fornecedor         String?
-  observacoes        String?
-  createdAt          DateTime   @default(now())
-  updatedAt          DateTime   @updatedAt
+  qrCodeUrl           String?
+  qrCodeHash          String?
+  statusSanitario     StatusLote @default(ATIVO)
+  hashCriptografico   String     @unique
+  notaFiscal          String?
+  fornecedor          String?
+  observacoes         String?
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
 
-  medicamento        Medicamento   @relation(fields: [medicamentoId], references: [id])
+  medicamento        Medicamento           @relation(fields: [medicamentoId], references: [id])
   estoque            EstoqueLote[]
   movimentacoes      Movimentacao[]
   dispensacoes       Dispensacao[]
@@ -271,15 +271,15 @@ model Lote {
 }
 
 model EstoqueLote {
-  id           String       @id @default(uuid())
-  loteId       String
-  unidadeId    String
-  quantidade   Int
-  localizacao  String?      // ex: "Prateleira A3, Câmara 2"
-  updatedAt    DateTime     @updatedAt
+  id          String   @id @default(uuid())
+  loteId      String
+  unidadeId   String
+  quantidade  Int
+  localizacao String? // ex: "Prateleira A3, Câmara 2"
+  updatedAt   DateTime @updatedAt
 
-  lote         Lote         @relation(fields: [loteId], references: [id])
-  unidade      UnidadeSaude @relation(fields: [unidadeId], references: [id])
+  lote    Lote         @relation(fields: [loteId], references: [id])
+  unidade UnidadeSaude @relation(fields: [unidadeId], references: [id])
 
   @@unique([loteId, unidadeId])
   @@map("estoque_lotes")
@@ -290,24 +290,24 @@ model EstoqueLote {
 // ============================================================
 
 model Movimentacao {
-  id              String           @id @default(uuid())
-  loteId          String
-  tipo            TipoMovimentacao
-  quantidade      Int
-  origemId        String?
-  destinoId       String?
-  usuarioId       String
-  justificativa   String?
-  documentoRef    String?          // NF, Ofício, etc.
-  hashBlockchain  String?
-  ip              String?
-  geolocalizacao  String?
-  createdAt       DateTime         @default(now())
+  id             String           @id @default(uuid())
+  loteId         String
+  tipo           TipoMovimentacao
+  quantidade     Int
+  origemId       String?
+  destinoId      String?
+  usuarioId      String
+  justificativa  String?
+  documentoRef   String? // NF, Ofício, etc.
+  hashBlockchain String?
+  ip             String?
+  geolocalizacao String?
+  createdAt      DateTime         @default(now())
 
-  lote            Lote             @relation(fields: [loteId], references: [id])
-  origem          UnidadeSaude?    @relation("MovOrigem", fields: [origemId], references: [id])
-  destino         UnidadeSaude?    @relation("MovDestino", fields: [destinoId], references: [id])
-  usuario         Usuario          @relation(fields: [usuarioId], references: [id])
+  lote    Lote          @relation(fields: [loteId], references: [id])
+  origem  UnidadeSaude? @relation("MovOrigem", fields: [origemId], references: [id])
+  destino UnidadeSaude? @relation("MovDestino", fields: [destinoId], references: [id])
+  usuario Usuario       @relation(fields: [usuarioId], references: [id])
 
   @@map("movimentacoes")
 }
@@ -317,43 +317,43 @@ model Movimentacao {
 // ============================================================
 
 model Paciente {
-  id              String   @id @default(uuid())
-  cpfHash         String   @unique    // CPF anonimizado via SHA-256
-  cartaoSusHash   String?  @unique
-  nomeHash        String?             // Nome pseudonimizado
-  dataNascimento  DateTime?
-  genero          String?
-  municipio       String?
-  uf              String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             String    @id @default(uuid())
+  cpfHash        String    @unique // CPF anonimizado via SHA-256
+  cartaoSusHash  String?   @unique
+  nomeHash       String? // Nome pseudonimizado
+  dataNascimento DateTime?
+  genero         String?
+  municipio      String?
+  uf             String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  dispensacoes    Dispensacao[]
+  dispensacoes Dispensacao[]
 
   @@map("pacientes")
 }
 
 model Dispensacao {
-  id             String   @id @default(uuid())
-  loteId         String
-  medicamentoId  String
-  pacienteId     String
-  unidadeId      String
-  usuarioId      String
-  quantidade     Int
-  dataDispensacao DateTime @default(now())
-  dosagem        String?
+  id                String   @id @default(uuid())
+  loteId            String
+  medicamentoId     String
+  pacienteId        String
+  unidadeId         String
+  usuarioId         String
+  quantidade        Int
+  dataDispensacao   DateTime @default(now())
+  dosagem           String?
   duracaoTratamento String?
-  cid10          String?
-  prescricaoRef  String?
-  hashBlockchain String?
-  observacoes    String?
+  cid10             String?
+  prescricaoRef     String?
+  hashBlockchain    String?
+  observacoes       String?
 
-  lote           Lote         @relation(fields: [loteId], references: [id])
-  medicamento    Medicamento  @relation(fields: [medicamentoId], references: [id])
-  paciente       Paciente     @relation(fields: [pacienteId], references: [id])
-  unidade        UnidadeSaude @relation(fields: [unidadeId], references: [id])
-  usuario        Usuario      @relation(fields: [usuarioId], references: [id])
+  lote        Lote         @relation(fields: [loteId], references: [id])
+  medicamento Medicamento  @relation(fields: [medicamentoId], references: [id])
+  paciente    Paciente     @relation(fields: [pacienteId], references: [id])
+  unidade     UnidadeSaude @relation(fields: [unidadeId], references: [id])
+  usuario     Usuario      @relation(fields: [usuarioId], references: [id])
 
   @@map("dispensacoes")
 }
@@ -363,23 +363,23 @@ model Dispensacao {
 // ============================================================
 
 model FarmacoVigilancia {
-  id              String                  @id @default(uuid())
-  loteId          String
-  usuarioId       String
-  tipoEvento      String  // RAM, Queixa Técnica, Desvio de Qualidade, Falha Terapêutica
-  descricao       String
-  gravidade       String  // Leve, Moderado, Grave, Fatal
-  status          StatusFarmacovigilancia @default(ABERTO)
-  dataCadastro    DateTime                @default(now())
-  dataOcorrencia  DateTime
-  acaoTomada      String?
-  notificacaoRef  String?                // Número notificação ANVISA
-  hashBlockchain  String?
-  resolucao       String?
-  updatedAt       DateTime               @updatedAt
+  id             String                  @id @default(uuid())
+  loteId         String
+  usuarioId      String
+  tipoEvento     String // RAM, Queixa Técnica, Desvio de Qualidade, Falha Terapêutica
+  descricao      String
+  gravidade      String // Leve, Moderado, Grave, Fatal
+  status         StatusFarmacovigilancia @default(ABERTO)
+  dataCadastro   DateTime                @default(now())
+  dataOcorrencia DateTime
+  acaoTomada     String?
+  notificacaoRef String? // Número notificação ANVISA
+  hashBlockchain String?
+  resolucao      String?
+  updatedAt      DateTime                @updatedAt
 
-  lote            Lote    @relation(fields: [loteId], references: [id])
-  usuario         Usuario @relation(fields: [usuarioId], references: [id])
+  lote    Lote    @relation(fields: [loteId], references: [id])
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
 
   @@map("farmacovigilancia")
 }
@@ -389,37 +389,37 @@ model FarmacoVigilancia {
 // ============================================================
 
 model BlocoBlockchain {
-  id              String   @id @default(uuid())
-  indice          Int      @unique
-  timestamp       DateTime @default(now())
-  hashAnterior    String
-  hashAtual       String   @unique
-  nonce           Int
-  dificuldade     Int      @default(2)
-  dadosJson       String   // JSON do bloco completo
-  validado        Boolean  @default(true)
-  createdAt       DateTime @default(now())
+  id           String   @id @default(uuid())
+  indice       Int      @unique
+  timestamp    DateTime @default(now())
+  hashAnterior String
+  hashAtual    String   @unique
+  nonce        Int
+  dificuldade  Int      @default(2)
+  dadosJson    String // JSON do bloco completo
+  validado     Boolean  @default(true)
+  createdAt    DateTime @default(now())
 
-  eventos         EventoBlockchain[]
+  eventos EventoBlockchain[]
 
   @@map("blocos_blockchain")
 }
 
 model EventoBlockchain {
-  id            String               @id @default(uuid())
-  blocoId       String?
-  tipoEvento    TipoEventoBlockchain
-  entidadeId    String               // ID da entidade relacionada
-  entidadeTipo  String               // "Lote", "Movimentacao", etc.
-  usuarioId     String?
-  dados         String               // JSON dos dados do evento
-  hashDados     String
-  assinatura    String?
-  timestamp     DateTime             @default(now())
+  id           String               @id @default(uuid())
+  blocoId      String?
+  tipoEvento   TipoEventoBlockchain
+  entidadeId   String // ID da entidade relacionada
+  entidadeTipo String // "Lote", "Movimentacao", etc.
+  usuarioId    String?
+  dados        String // JSON dos dados do evento
+  hashDados    String
+  assinatura   String?
+  timestamp    DateTime             @default(now())
 
-  bloco         BlocoBlockchain? @relation(fields: [blocoId], references: [id])
-  usuario       Usuario?         @relation(fields: [usuarioId], references: [id])
-  lote          Lote?            @relation(fields: [entidadeId], references: [id], map: "fk_evento_lote")
+  bloco   BlocoBlockchain? @relation(fields: [blocoId], references: [id])
+  usuario Usuario?         @relation(fields: [usuarioId], references: [id])
+  lote    Lote?            @relation(fields: [entidadeId], references: [id], map: "fk_evento_lote")
 
   @@map("eventos_blockchain")
 }
@@ -429,34 +429,34 @@ model EventoBlockchain {
 // ============================================================
 
 model RegistroTemperatura {
-  id            String   @id @default(uuid())
-  loteId        String
-  temperatura   Float
-  umidade       Float?
-  sensor        String?
-  localizacao   String?
-  conformidade  Boolean  @default(true)
-  alertaGerado  Boolean  @default(false)
-  timestamp     DateTime @default(now())
+  id           String   @id @default(uuid())
+  loteId       String
+  temperatura  Float
+  umidade      Float?
+  sensor       String?
+  localizacao  String?
+  conformidade Boolean  @default(true)
+  alertaGerado Boolean  @default(false)
+  timestamp    DateTime @default(now())
 
-  lote          Lote     @relation(fields: [loteId], references: [id])
+  lote Lote @relation(fields: [loteId], references: [id])
 
   @@map("registros_temperatura")
 }
 
 model Alerta {
-  id          String      @id @default(uuid())
-  tipo        String
-  mensagem    String
-  entidadeId  String
+  id           String       @id @default(uuid())
+  tipo         String
+  mensagem     String
+  entidadeId   String
   entidadeTipo String
-  usuarioId   String?
-  status      StatusAlerta @default(ATIVO)
-  prioridade  String       @default("MEDIA")
-  createdAt   DateTime     @default(now())
-  resolvidoEm DateTime?
+  usuarioId    String?
+  status       StatusAlerta @default(ATIVO)
+  prioridade   String       @default("MEDIA")
+  createdAt    DateTime     @default(now())
+  resolvidoEm  DateTime?
 
-  usuario     Usuario? @relation(fields: [usuarioId], references: [id])
+  usuario Usuario? @relation(fields: [usuarioId], references: [id])
 
   @@map("alertas")
 }
@@ -466,19 +466,19 @@ model Alerta {
 // ============================================================
 
 model AuditLog {
-  id          String   @id @default(uuid())
-  usuarioId   String?
-  acao        String
-  entidade    String
-  entidadeId  String?
-  valorAntes  String?  // JSON do valor anterior
-  valorDepois String?  // JSON do novo valor
-  ip          String?
-  userAgent   String?
+  id             String   @id @default(uuid())
+  usuarioId      String?
+  acao           String
+  entidade       String
+  entidadeId     String?
+  valorAntes     String? // JSON do valor anterior
+  valorDepois    String? // JSON do novo valor
+  ip             String?
+  userAgent      String?
   geolocalizacao String?
-  timestamp   DateTime @default(now())
+  timestamp      DateTime @default(now())
 
-  usuario     Usuario? @relation(fields: [usuarioId], references: [id])
+  usuario Usuario? @relation(fields: [usuarioId], references: [id])
 
   @@map("audit_logs")
 }
