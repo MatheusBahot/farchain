@@ -1,0 +1,80 @@
+name: FarChain CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-build:
+    name: Lint e Build
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: farchain
+          POSTGRES_PASSWORD: farchain_secret
+          POSTGRES_DB: farchain_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Instalar dependências
+        run: pnpm install --frozen-lockfile
+
+      - name: Configurar .env
+        run: cp .env.example .env
+
+      - name: Gerar Prisma Client
+        run: pnpm --filter backend prisma generate
+        env:
+          DATABASE_URL: postgresql://farchain:farchain_secret@localhost:5432/farchain_db
+
+      - name: Executar migrations
+        run: pnpm --filter backend prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://farchain:farchain_secret@localhost:5432/farchain_db
+
+      - name: Lint Backend
+        run: pnpm --filter backend lint
+
+      - name: Build Backend
+        run: pnpm --filter backend build
+        env:
+          DATABASE_URL: postgresql://farchain:farchain_secret@localhost:5432/farchain_db
+
+      - name: Build Frontend
+        run: pnpm --filter frontend build
+        env:
+          VITE_API_URL: http://localhost:3001/api/v1
+          VITE_APP_NAME: FarChain
+
+  security:
+    name: Auditoria de Segurança
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+        with: { version: 9 }
+      - run: pnpm audit --audit-level=high || true

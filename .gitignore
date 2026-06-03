@@ -1,0 +1,49 @@
+# Dependências
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# Ambiente
+.env
+.env.local
+.env.production
+.env.*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Cache
+.turbo/
+.cache/
+.eslintcache
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker/postgres/data/
+
+# Prisma
+prisma/migrations/.migration_lock.toml
+
+# Cobertura de testes
+coverage/
+.nyc_output/
+
+# TypeScript
+*.tsbuildinfo
