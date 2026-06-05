@@ -88,7 +88,7 @@ export class TccService implements OnModuleInit {
   }
 
   private async criarBloco(tipo: string, payload: any) {
-    const ultimo = await this.prisma.$queryRawUnsafe<any[]>(`
+    const ultimo = await (this.prisma as any).$queryRawUnsafe(`
       SELECT indice, hash
       FROM tcc_blockchain
       ORDER BY indice DESC
@@ -191,7 +191,7 @@ export class TccService implements OnModuleInit {
   async listarMedicamentosLotes() {
     await this.ensureTables();
 
-    const rows = await this.prisma.$queryRawUnsafe<any[]>(`
+    const rows = await (this.prisma as any).$queryRawUnsafe(`
       SELECT * FROM tcc_medicamentos_lotes ORDER BY created_at DESC
     `);
 
@@ -306,7 +306,7 @@ export class TccService implements OnModuleInit {
   async listarDispensacoes() {
     await this.ensureTables();
 
-    const rows = await this.prisma.$queryRawUnsafe<any[]>(`
+    const rows = await (this.prisma as any).$queryRawUnsafe(`
       SELECT * FROM tcc_dispensacoes ORDER BY created_at DESC
     `);
 
@@ -346,7 +346,7 @@ export class TccService implements OnModuleInit {
   async listarBlockchain() {
     await this.ensureTables();
 
-    return this.prisma.$queryRawUnsafe<any[]>(`
+    return (this.prisma as any).$queryRawUnsafe(`
       SELECT
         id,
         indice,
@@ -363,7 +363,7 @@ export class TccService implements OnModuleInit {
   async rastrearPorLote(lote: string) {
     await this.ensureTables();
 
-    const blocos = await this.prisma.$queryRawUnsafe<any[]>(`
+    const blocos = await (this.prisma as any).$queryRawUnsafe(`
       SELECT
         id,
         indice,
@@ -377,14 +377,14 @@ export class TccService implements OnModuleInit {
       ORDER BY indice ASC
     `, `%${lote}%`);
 
-    const medicamento = await this.prisma.$queryRawUnsafe<any[]>(`
+    const medicamento = await (this.prisma as any).$queryRawUnsafe(`
       SELECT *
       FROM tcc_medicamentos_lotes
       WHERE numero_lote = $1
       LIMIT 1
     `, lote);
 
-    const dispensacao = await this.prisma.$queryRawUnsafe<any[]>(`
+    const dispensacao = await (this.prisma as any).$queryRawUnsafe(`
       SELECT *
       FROM tcc_dispensacoes
       WHERE lote = $1

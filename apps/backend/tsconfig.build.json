@@ -1,10 +1,12 @@
 {
   "extends": "./tsconfig.json",
   "exclude": [
-    "node_modules",
+    "prisma",
     "test",
+    "**/*spec.ts",
     "dist",
-    "**/*spec.ts"
+    "prisma/**/*.ts",
+    "node_modules"
   ],
   "compilerOptions": {
     "baseUrl": "."
