@@ -1,282 +1,121 @@
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { motion } from 'framer-motion';
+import { AlertTriangle, CheckCircle2, Hash, Package, ShieldCheck } from 'lucide-react';
 import { qrCodeApi } from '@services/api';
-import {
-  CheckCircle2, AlertTriangle, XCircle, Clock, Package,
-  Building2, Link2, ArrowRight, Shield,
-} from 'lucide-react';
-import clsx from 'clsx';
-
-const statusConfig = {
-  INTEGRO: { icon: CheckCircle2, color: 'text-success-500', bg: 'bg-success-500/10', border: 'border-success-500/30', label: '✓ Produto íntegro e autenticado' },
-  VALIDADE_PROXIMA: { icon: Clock, color: 'text-warning-500', bg: 'bg-warning-500/10', border: 'border-warning-500/30', label: '⚠ Validade próxima ao vencimento' },
-  VENCIDO: { icon: XCircle, color: 'text-danger-500', bg: 'bg-danger-500/10', border: 'border-danger-500/30', label: '✗ Produto vencido' },
-  BLOQUEADO: { icon: AlertTriangle, color: 'text-danger-500', bg: 'bg-danger-500/10', border: 'border-danger-500/30', label: '✗ Produto bloqueado pela ANVISA' },
-};
 
 export default function RastreioPublicoPage() {
-  const { hash } = useParams<{ hash: string }>();
+  const { hash } = useParams();
+  const [data, setData] = useState<any>(null);
+  const [erro, setErro] = useState(false);
 
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ['rastreio', hash],
-    queryFn: () => qrCodeApi.consultar(hash!),
-    enabled: !!hash,
-    retry: 1,
-  });
+  useEffect(() => {
+    async function carregar() {
+      try {
+        if (!hash) return;
+        const response = await qrCodeApi.consultar(hash);
+        setData(response.data?.data || response.data);
+      } catch (error) {
+        console.error(error);
+        setErro(true);
+      }
+    }
 
-  if (isLoading) {
+    carregar();
+  }, [hash]);
+
+  if (erro) {
     return (
-      <div className="min-h-screen bg-grafite-950 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-grafite-400">Consultando blockchain...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (isError || !data) {
-    return (
-      <div className="min-h-screen bg-grafite-950 flex items-center justify-center p-6">
-        <div className="text-center max-w-sm">
-          <XCircle size={48} className="text-danger-500 mx-auto mb-4" />
-          <h2 className="text-white font-bold text-xl mb-2">Produto não encontrado</h2>
-          <p className="text-grafite-400 text-sm">
-            O QR Code consultado não corresponde a nenhum produto 
-            registrado no FarChain. Verifique a autenticidade do medicamento.
+      <main className="min-h-screen bg-[#f5f5f7] p-6 text-slate-950">
+        <section className="mx-auto max-w-3xl rounded-[32px] bg-white p-8 shadow-xl">
+          <AlertTriangle className="text-amber-500" size={34} />
+          <h1 className="mt-5 text-3xl font-black">Registro não encontrado</h1>
+          <p className="mt-3 text-sm text-slate-500">
+            Não foi possível localizar o QR Code informado.
           </p>
-        </div>
-      </div>
+        </section>
+      </main>
     );
   }
 
-  const status = statusConfig[data.statusConsulta as keyof typeof statusConfig] || statusConfig.INTEGRO;
-  const StatusIcon = status.icon;
+  if (!data) {
+    return (
+      <main className="min-h-screen bg-[#f5f5f7] p-6 text-slate-950">
+        <section className="mx-auto max-w-3xl rounded-[32px] bg-white p-8 shadow-xl">
+          Carregando rastreabilidade...
+        </section>
+      </main>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-grafite-950 text-white">
-      {/* Header */}
-      <div className="bg-grafite-900 border-b border-grafite-800 px-6 py-4">
-        <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary-500 to-teal-500 
-                            flex items-center justify-center">
-              <Link2 size={14} className="text-white" />
-            </div>
-            <span className="font-display font-bold text-white">
-              Far<span className="text-primary-400">Chain</span>
-            </span>
-            <span className="text-grafite-500 text-sm ml-2">— Consulta Pública</span>
-          </div>
-          <div className="flex items-center gap-1 text-xs text-grafite-500">
-            <Shield size={12} />
-            LGPD
+    <main className="min-h-screen bg-[#f5f5f7] p-6 text-slate-950">
+      <section className="mx-auto max-w-5xl rounded-[32px] bg-white p-8 shadow-[0_24px_80px_rgba(15,23,42,.12)]">
+        <p className="text-[11px] font-black uppercase tracking-[0.25em] text-blue-600">
+          Consulta pública FarmaChain
+        </p>
+
+        <h1 className="mt-4 text-4xl font-black tracking-[-0.055em]">
+          Rastreabilidade do medicamento
+        </h1>
+
+        <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-600">
+          Consulta pública de autenticidade, lote, validade e integridade
+          blockchain do medicamento.
+        </p>
+
+        <div className="mt-8 grid gap-4 md:grid-cols-3">
+          <Card icon={Package} label="Medicamento" value={data.medicamento?.dcb || data.medicamento?.nomeComercial || '—'} />
+          <Card icon={ShieldCheck} label="Status" value={data.statusConsulta || 'ÍNTEGRO'} />
+          <Card icon={Hash} label="Hash" value={data.lote?.hashCriptografico || data.blockchain?.ultimoHash || '—'} />
+        </div>
+
+        <div className="mt-8 rounded-[28px] bg-slate-50 p-6">
+          <h2 className="text-xl font-black">Dados do lote</h2>
+
+          <div className="mt-5 grid gap-4 md:grid-cols-2">
+            <Info label="Número do lote" value={data.lote?.numeroLote} />
+            <Info label="Fabricante" value={data.lote?.fabricante || data.medicamento?.fabricante} />
+            <Info label="Forma farmacêutica" value={data.medicamento?.formaFarmaceutica} />
+            <Info label="Classe CEAF" value={data.medicamento?.classeCEAF} />
+            <Info label="Validade" value={data.lote?.dataValidade ? new Date(data.lote.dataValidade).toLocaleDateString('pt-BR') : '—'} />
+            <Info label="Eventos blockchain" value={String(data.blockchain?.totalEventos || '—')} />
           </div>
         </div>
-      </div>
 
-      <div className="max-w-2xl mx-auto px-6 py-8 space-y-6">
-        {/* Status */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={clsx('rounded-2xl border p-6', status.bg, status.border)}
-        >
-          <div className="flex items-center gap-3">
-            <StatusIcon size={28} className={status.color} />
-            <div>
-              <p className={clsx('font-bold text-lg', status.color)}>{status.label}</p>
-              <p className="text-grafite-400 text-sm mt-1">
-                Consulta realizada em {new Date().toLocaleString('pt-BR')}
-              </p>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Medicamento */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="card p-6"
-        >
-          <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
-            <Package size={18} className="text-primary-400" />
-            Informações do Medicamento
-          </h3>
-          <dl className="grid grid-cols-2 gap-y-3 text-sm">
-            <div>
-              <dt className="text-grafite-500">DCB</dt>
-              <dd className="text-white font-medium">{data.medicamento?.dcb}</dd>
-            </div>
-            <div>
-              <dt className="text-grafite-500">Nome Comercial</dt>
-              <dd className="text-white">{data.medicamento?.nomeComercial || '—'}</dd>
-            </div>
-            <div>
-              <dt className="text-grafite-500">Fabricante</dt>
-              <dd className="text-white">{data.medicamento?.fabricante}</dd>
-            </div>
-            <div>
-              <dt className="text-grafite-500">Forma Farmacêutica</dt>
-              <dd className="text-white">{data.medicamento?.formaFarmaceutica}</dd>
-            </div>
-            <div>
-              <dt className="text-grafite-500">Classe CEAF</dt>
-              <dd className="text-white">{data.medicamento?.classeCEAF}</dd>
-            </div>
-            {data.medicamento?.requireCadeiaFria && (
-              <div className="col-span-2">
-                <dd className="badge badge-warning">❄ Requer Cadeia Fria</dd>
-              </div>
-            )}
-          </dl>
-        </motion.div>
-
-        {/* Lote */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="card p-6"
-        >
-          <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
-            <Package size={18} className="text-teal-400" />
-            Dados do Lote
-          </h3>
-          <dl className="grid grid-cols-2 gap-y-3 text-sm">
-            <div>
-              <dt className="text-grafite-500">Nº do Lote</dt>
-              <dd className="text-white font-mono">{data.lote?.numeroLote}</dd>
-            </div>
-            <div>
-              <dt className="text-grafite-500">Fabricante</dt>
-              <dd className="text-white">{data.lote?.fabricante}</dd>
-            </div>
-            <div>
-              <dt className="text-grafite-500">Fabricação</dt>
-              <dd className="text-white">
-                {data.lote?.dataFabricacao
-                  ? new Date(data.lote.dataFabricacao).toLocaleDateString('pt-BR')
-                  : '—'}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-grafite-500">Validade</dt>
-              <dd className={clsx('font-medium',
-                data.diasParaVencer <= 0 ? 'text-danger-400' :
-                data.diasParaVencer <= 30 ? 'text-warning-400' : 'text-success-400'
-              )}>
-                {data.lote?.dataValidade
-                  ? new Date(data.lote.dataValidade).toLocaleDateString('pt-BR')
-                  : '—'}
-                {data.diasParaVencer > 0 && (
-                  <span className="text-grafite-500 font-normal ml-1">
-                    ({data.diasParaVencer} dias)
-                  </span>
-                )}
-              </dd>
-            </div>
-          </dl>
-          <div className="mt-4 pt-4 border-t border-grafite-700">
-            <dt className="text-grafite-500 text-xs mb-1">Hash criptográfico</dt>
-            <dd className="text-grafite-400 font-mono text-xs break-all">
-              {data.lote?.hashCriptografico}
-            </dd>
-          </div>
-        </motion.div>
-
-        {/* Localização atual */}
-        {data.localizacaoAtual?.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="card p-6"
-          >
-            <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
-              <Building2 size={18} className="text-primary-400" />
-              Localização Atual
-            </h3>
-            {data.localizacaoAtual.map((loc: any, i: number) => (
-              <div key={i} className="flex items-center justify-between text-sm py-2">
-                <div>
-                  <p className="text-white font-medium">{loc.unidade}</p>
-                  <p className="text-grafite-500">{loc.tipo} · {loc.municipio}</p>
-                </div>
-                <span className="badge badge-primary">{loc.quantidade} un.</span>
-              </div>
-            ))}
-          </motion.div>
-        )}
-
-        {/* Histórico */}
         {data.historico?.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25 }}
-            className="card p-6"
-          >
-            <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
-              <ArrowRight size={18} className="text-teal-400" />
-              Histórico Logístico
-            </h3>
-            <div className="space-y-3">
+          <div className="mt-8 rounded-[28px] bg-slate-50 p-6">
+            <h2 className="text-xl font-black">Histórico</h2>
+            <div className="mt-5 space-y-3">
               {data.historico.map((h: any, i: number) => (
-                <div key={i} className="flex items-center gap-3 text-sm">
-                  <div className="w-2 h-2 rounded-full bg-primary-500 shrink-0" />
-                  <div className="flex-1">
-                    <span className="text-white">{h.tipo.replace(/_/g, ' ')}</span>
-                    {h.origem && <span className="text-grafite-500 ml-1">de {h.origem}</span>}
-                    {h.destino && <span className="text-grafite-500 ml-1">→ {h.destino}</span>}
-                  </div>
-                  <span className="text-grafite-600 text-xs">
-                    {new Date(h.data).toLocaleDateString('pt-BR')}
-                  </span>
+                <div key={i} className="rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+                  <CheckCircle2 className="text-emerald-500" size={18} />
+                  <p className="mt-2 text-sm font-black">{h.tipo || h.evento || 'Evento registrado'}</p>
+                  <p className="mt-1 text-xs text-slate-500">{h.createdAt || h.data || '—'}</p>
                 </div>
               ))}
             </div>
-          </motion.div>
-        )}
-
-        {/* Blockchain */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="card p-6 border-primary-500/20"
-        >
-          <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
-            <Link2 size={18} className="text-primary-400" />
-            Registro Blockchain
-          </h3>
-          <div className="grid grid-cols-3 gap-4 text-center text-sm">
-            <div>
-              <p className="text-2xl font-bold text-primary-400">{data.blockchain?.totalEventos}</p>
-              <p className="text-grafite-500 text-xs">Eventos registrados</p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-teal-400">
-                <CheckCircle2 size={28} className="mx-auto" />
-              </p>
-              <p className="text-grafite-500 text-xs">Cadeia íntegra</p>
-            </div>
-            <div>
-              <p className="text-xs font-mono text-grafite-400 break-all">
-                {data.blockchain?.ultimoHash?.substring(0, 12)}...
-              </p>
-              <p className="text-grafite-500 text-xs mt-1">Último hash</p>
-            </div>
           </div>
-        </motion.div>
+        )}
+      </section>
+    </main>
+  );
+}
 
-        <p className="text-center text-xs text-grafite-600 pb-8">
-          Esta consulta não exibe dados pessoais. Informações protegidas pela LGPD.
-          <br />FarChain · Plataforma de Rastreabilidade CEAF/SUS
-        </p>
-      </div>
+function Card({ icon: Icon, label, value }: any) {
+  return (
+    <div className="rounded-2xl bg-slate-50 p-5 ring-1 ring-slate-200">
+      <Icon className="text-blue-600" size={22} />
+      <p className="mt-4 text-xs font-black uppercase tracking-wider text-slate-400">{label}</p>
+      <p className="mt-1 break-all text-sm font-black">{value || '—'}</p>
+    </div>
+  );
+}
+
+function Info({ label, value }: any) {
+  return (
+    <div className="rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+      <p className="text-xs font-black uppercase tracking-wider text-slate-400">{label}</p>
+      <p className="mt-1 break-all text-sm font-bold text-slate-800">{value || '—'}</p>
     </div>
   );
 }
