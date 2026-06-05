@@ -5,8 +5,8 @@ import 'leaflet/dist/leaflet.css';
 
 // Fix ícone padrão Leaflet + Vite
 import L from 'leaflet';
-import iconUrl from 'leaflet/dist/images/marker-icon.png';
-import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+import iconUrl from 'leaflet/dist/images/marker-icon.webp';
+import iconShadow from 'leaflet/dist/images/marker-shadow.webp';
 
 const DefaultIcon = L.icon({
   iconUrl,
@@ -64,7 +64,7 @@ export default function MapaSaude({ unidades, height = '400px', className = '' }
         zoomControl={true}
       >
         <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.webp"
           attribution='&copy; <a href="https://www.openstreetmap.org/">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>'
           maxZoom={19}
         />

@@ -43,7 +43,7 @@ function Header() {
       <nav className="mx-auto flex h-14 max-w-7xl items-center justify-between px-6">
         <Link to="/" className="flex items-center gap-3">
           <img
-            src="/images/logo/farmachain-logo.png"
+            src="/images/logo/farmachain-logo.webp"
             alt="FarmaChain"
             className="h-8 w-8 rounded-xl object-contain"
           />
@@ -121,7 +121,7 @@ function Hero() {
           <div className="absolute -inset-4 rounded-[2.5rem] bg-blue-200/40 blur-3xl" />
           <div className="relative overflow-hidden rounded-[2.3rem] bg-white p-3 shadow-[0_30px_100px_rgba(15,23,42,.16)]">
             <img
-              src="/images/hero-pharma.png"
+              src="/images/hero-pharma.webp"
               alt="Rastreabilidade farmacêutica FarmaChain"
               className="h-[360px] w-full rounded-[1.8rem] object-cover md:h-[520px]"
             />
@@ -138,7 +138,7 @@ function About() {
       <div className="mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-2">
         <div className="overflow-hidden rounded-[2rem] bg-white p-3 shadow-[0_24px_80px_rgba(15,23,42,.10)]">
           <img
-            src="/images/dashboard.png"
+            src="/images/dashboard.webp"
             alt="Dashboard FarmaChain"
             className="h-[360px] w-full rounded-[1.5rem] object-cover"
           />
@@ -219,7 +219,7 @@ function Blockchain() {
       <div className="mx-auto grid max-w-7xl items-center gap-10 rounded-[2.5rem] bg-neutral-950 p-6 text-white shadow-2xl md:p-10 lg:grid-cols-2">
         <div className="overflow-hidden rounded-[2rem]">
           <img
-            src="/images/blockchain.png"
+            src="/images/blockchain.webp"
             alt="Blockchain farmacêutica"
             className="h-[360px] w-full object-cover"
           />
@@ -284,14 +284,14 @@ function Security() {
         <div className="grid gap-5">
           <div className="overflow-hidden rounded-[2rem] bg-white p-3 shadow-[0_24px_80px_rgba(15,23,42,.10)]">
             <img
-              src="/images/farmacovigilancia.png"
+              src="/images/farmacovigilancia.webp"
               alt="Farmacovigilância"
               className="h-[260px] w-full rounded-[1.5rem] object-cover"
             />
           </div>
           <div className="overflow-hidden rounded-[2rem] bg-white p-3 shadow-[0_24px_80px_rgba(15,23,42,.10)]">
             <img
-              src="/images/auditoria.png"
+              src="/images/auditoria.webp"
               alt="Auditoria"
               className="h-[260px] w-full rounded-[1.5rem] object-cover"
             />

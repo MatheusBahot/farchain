@@ -22,8 +22,8 @@ const distritos = [
 const caf = { nome: 'CAF Central Salvador', lat: -12.9704, lng: -38.5124 };
 
 const blueIcon = new L.Icon({
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.webp',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.webp',
   iconSize: [25, 41],
   iconAnchor: [12, 41],
 });
@@ -51,7 +51,7 @@ export default function DistritosPage() {
           <MapContainer center={[-12.96, -38.48]} zoom={11} scrollWheelZoom className="h-[620px] rounded-[24px]">
             <TileLayer
               attribution='&copy; OpenStreetMap &copy; CARTO'
-              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.webp"
             />
 
             <Circle
