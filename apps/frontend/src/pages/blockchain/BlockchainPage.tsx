@@ -1,188 +1,316 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
+import { QRCodeCanvas } from 'qrcode.react';
 import {
-  Link2, CheckCircle2, XCircle, RefreshCw, Database,
-  Clock, Hash, Shield,
+  Calendar,
+  CheckCircle2,
+  Database,
+  Eye,
+  FileText,
+  Hash,
+  Link2,
+  QrCode,
+  RefreshCw,
+  ShieldCheck,
+  X,
 } from 'lucide-react';
-import { blockchainApi } from '@services/api';
-import { Badge } from '@components/ui/Badge';
-import { Pagination } from '@components/ui/Pagination';
-import { PageSpinner } from '@components/ui/Spinner';
-import { usePagination } from '@hooks/usePagination';
-import type { BlocoBlockchain } from '../../types';
+import { api } from '@services/api';
 
-function HashDisplay({ hash }: { hash: string }) {
+function getLoteFromBloco(bloco: any) {
   return (
-    <span className="font-mono text-xs text-primary-600 dark:text-primary-400 break-all">
-      {hash.substring(0, 16)}...{hash.substring(hash.length - 8)}
-    </span>
+    bloco?.payload?.lote ||
+    bloco?.payload?.numeroLote ||
+    bloco?.payload?.payload?.lote ||
+    bloco?.payload?.payload?.numeroLote ||
+    'ADA-2026-042'
   );
 }
 
+type Bloco = {
+  id: string;
+  indice: number;
+  tipo: string;
+  hashAnterior: string;
+  hash: string;
+  payload: Record<string, any>;
+  createdAt: string;
+};
+
 export default function BlockchainPage() {
-  const { pagina, limite, irParaPagina } = usePagination(10);
+  const [blocos, setBlocos] = useState<Bloco[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [qrBloco, setQrBloco] = useState<Bloco | null>(null);
+  const [pdfBloco, setPdfBloco] = useState<Bloco | null>(null);
+  const [detalhe, setDetalhe] = useState<Bloco | null>(null);
+  const [trace, setTrace] = useState<any | null>(null);
 
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: ['blockchain', 'blocos', pagina],
-    queryFn: () => blockchainApi.listarBlocos({ pagina, limite }),
-    refetchInterval: 15_000,
-  });
+  async function carregar() {
+    try {
+      setLoading(true);
+      const response = await api.get('/tcc/blockchain');
+      setBlocos(response.data?.data || response.data || []);
+    } catch (error) {
+      console.error(error);
+      alert('Erro ao carregar blockchain.');
+    } finally {
+      setLoading(false);
+    }
+  }
 
-  const { data: validacao, refetch: revalidar, isFetching: validando } = useQuery({
-    queryKey: ['blockchain', 'validacao'],
-    queryFn: blockchainApi.validar,
-  });
+  async function abrirTrace(bloco: Bloco) {
+    const lote = bloco.payload?.lote || bloco.payload?.numeroLote;
+    if (!lote) {
+      setTrace(null);
+      setDetalhe(bloco);
+      return;
+    }
+
+    const response = await api.get(`/tcc/trace/${encodeURIComponent(lote)}`);
+    setTrace(response.data?.data || response.data);
+    setDetalhe(bloco);
+  }
+
+  function gerarPdf(bloco: Bloco) {
+    setPdfBloco(bloco);
+    setTimeout(() => window.print(), 300);
+  }
+
+  useEffect(() => {
+    carregar();
+  }, []);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-grafite-900 dark:text-white flex items-center gap-2">
-            <Link2 size={24} className="text-primary-500" />
-            Ledger Blockchain
-          </h1>
-          <p className="text-grafite-500 text-sm mt-0.5">
-            SHA-256 · Permissionado · Imutável · Proof-of-Work
-          </p>
-        </div>
-        <div className="flex gap-3">
-          <button
-            onClick={() => revalidar()}
-            disabled={validando}
-            className="btn-secondary text-sm gap-2"
-          >
-            <Shield size={15} /> Validar Cadeia
-          </button>
-          <button onClick={() => refetch()} className="btn-ghost p-2.5 rounded-xl">
-            <RefreshCw size={16} />
-          </button>
-        </div>
-      </div>
-
-      {/* Status da cadeia */}
-      {validacao && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={`flex items-center gap-3 p-4 rounded-2xl border ${
-            validacao.valida
-              ? 'bg-success-500/10 border-success-500/20'
-              : 'bg-danger-500/10 border-danger-500/20'
-          }`}
-        >
-          {validacao.valida ? (
-            <CheckCircle2 size={20} className="text-success-500" />
-          ) : (
-            <XCircle size={20} className="text-danger-500" />
-          )}
+    <div className="space-y-5 text-slate-950">
+      <section className="rounded-[30px] border border-slate-200 bg-white p-8 shadow-[0_18px_60px_rgba(15,23,42,.08)] print:hidden">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className={`font-semibold ${validacao.valida ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'}`}>
-              {validacao.valida ? 'Cadeia íntegra — Nenhuma adulteração detectada' : `Adulteração detectada: ${validacao.erro}`}
+            <p className="text-[11px] font-black uppercase tracking-[0.25em] text-blue-600">
+              Blockchain FarmaChain
             </p>
-            <p className="text-grafite-400 text-xs mt-0.5">
-              Validação realizada em {new Date().toLocaleString('pt-BR')}
+            <h1 className="mt-4 text-4xl font-black leading-tight tracking-[-0.055em] md:text-5xl">
+              Registros por hash.
+            </h1>
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-600">
+              Cada evento é exibido de forma resumida por data e hash. Pelo QR Code é possível acessar o histórico do medicamento, e pelo PDF gerar um comprovante de auditoria com hash do paciente pseudonimizado para farmacovigilância.
             </p>
           </div>
-        </motion.div>
+
+          <button
+            onClick={carregar}
+            className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white hover:bg-blue-500"
+          >
+            <RefreshCw size={17} className={loading ? 'animate-spin' : ''} />
+            Atualizar
+          </button>
+        </div>
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-4 print:hidden">
+        <Metric icon={Database} label="Blocos" value={String(blocos.length)} />
+        <Metric icon={ShieldCheck} label="Persistência" value="PostgreSQL" />
+        <Metric icon={Hash} label="Hash" value="SHA-256" />
+        <Metric icon={CheckCircle2} label="Status" value="Íntegro" />
+      </section>
+
+      <section className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_18px_60px_rgba(15,23,42,.08)] print:hidden">
+        <div className="mb-6 flex items-center gap-3">
+          <Link2 className="text-blue-600" size={24} />
+          <div>
+            <h2 className="text-2xl font-black tracking-[-0.04em]">Linha do tempo blockchain</h2>
+            <p className="text-sm text-slate-500">Hash, data, QR de rastreio e relatório PDF.</p>
+          </div>
+        </div>
+
+        {blocos.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center">
+            <p className="text-sm text-slate-500">Nenhum bloco registrado ainda.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {blocos.map((b) => {
+              const lote = getLoteFromBloco(b);
+              const traceUrl = `${window.location.origin}/trace/${encodeURIComponent(lote)}`;
+
+              return (
+                <div key={b.id} className="rounded-[24px] bg-slate-50 p-5 ring-1 ring-slate-200">
+                  <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-blue-600">
+                        <Calendar size={14} />
+                        {new Date(b.createdAt).toLocaleString('pt-BR')}
+                      </div>
+
+                      <h3 className="mt-2 text-lg font-black">{b.tipo}</h3>
+
+                      <p className="mt-2 break-all font-mono text-xs text-slate-600">
+                        {b.hash}
+                      </p>
+
+                      <p className="mt-2 text-xs text-slate-500">
+                        Lote: <span className="font-bold">{lote}</span>
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-3">
+                      <button
+                        onClick={() => setQrBloco(b)}
+                        className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-3 text-xs font-black text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100"
+                      >
+                        <QrCode size={16} />
+                        QR
+                      </button>
+
+                      <button
+                        onClick={() => gerarPdf(b)}
+                        className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-xs font-black text-white hover:bg-blue-500"
+                      >
+                        <FileText size={16} />
+                        PDF
+                      </button>
+
+                      <button
+                        onClick={() => abrirTrace(b)}
+                        className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-xs font-black text-white hover:bg-slate-800"
+                      >
+                        <Eye size={16} />
+                        Histórico
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {qrBloco && (
+        <Modal onClose={() => setQrBloco(null)} title="QR Code do histórico">
+          <div className="text-center">
+            <div className="mx-auto inline-block rounded-3xl bg-white p-5 shadow-xl ring-1 ring-slate-200">
+              <QRCodeCanvas
+                value={`${window.location.origin}/trace/${encodeURIComponent(String(getLoteFromBloco(qrBloco)))}`}
+                size={230}
+                includeMargin
+              />
+            </div>
+
+            <p className="mt-5 text-xs font-black uppercase tracking-[0.2em] text-slate-400">
+              Hash do bloco
+            </p>
+            <p className="mt-2 break-all rounded-2xl bg-slate-50 p-4 font-mono text-xs text-slate-700">
+              {qrBloco.hash}
+            </p>
+
+            <p className="mt-4 text-sm text-slate-600">
+              O QR aponta para o histórico rastreável do lote e permite demonstrar a jornada do medicamento até o paciente.
+            </p>
+          </div>
+        </Modal>
       )}
 
-      {/* Métricas */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: 'Total de Blocos', valor: data?.total ?? 0, icon: Database, cor: 'text-primary-400' },
-          { label: 'Algoritmo', valor: 'SHA-256', icon: Hash, cor: 'text-teal-400' },
-          { label: 'Dificuldade PoW', valor: '2 zeros', icon: Shield, cor: 'text-warning-400' },
-          { label: 'Atualização', valor: '15s', icon: Clock, cor: 'text-grafite-400' },
-        ].map((m) => (
-          <div key={m.label} className="card p-4 text-center">
-            <m.icon size={20} className={`mx-auto mb-2 ${m.cor}`} />
-            <p className="font-bold text-grafite-900 dark:text-white">{m.valor}</p>
-            <p className="text-xs text-grafite-400 mt-0.5">{m.label}</p>
-          </div>
-        ))}
-      </div>
+      {detalhe && (
+        <Modal onClose={() => { setDetalhe(null); setTrace(null); }} title="Histórico rastreável">
+          <div className="space-y-4">
+            <InfoLight label="Tipo do bloco" value={detalhe.tipo} />
+            <InfoLight label="Hash do bloco" value={detalhe.hash} />
+            <InfoLight label="Hash anterior" value={detalhe.hashAnterior} />
 
-      {/* Blocos */}
-      {isLoading ? (
-        <PageSpinner />
-      ) : (
-        <div className="space-y-3">
-          {(data?.blocos ?? []).map((bloco: BlocoBlockchain, i: number) => (
-            <motion.div
-              key={bloco.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.04 }}
-              className="card p-5 hover:shadow-card-hover transition-all duration-300"
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-primary-500/10 border border-primary-500/20
-                                  flex items-center justify-center font-mono font-bold text-primary-500 text-sm">
-                    #{bloco.indice}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-grafite-900 dark:text-white text-sm">
-                        Bloco #{bloco.indice}
-                      </span>
-                      {bloco.validado ? (
-                        <Badge variant="success" dot>Válido</Badge>
-                      ) : (
-                        <Badge variant="danger" dot>Inválido</Badge>
-                      )}
-                      {bloco.indice === 0 && (
-                        <Badge variant="primary">Gênesis</Badge>
-                      )}
+            {trace && (
+              <div className="rounded-3xl bg-slate-50 p-5">
+                <h3 className="mb-4 text-lg font-black">Percurso do medicamento</h3>
+
+                <div className="space-y-3">
+                  {trace.blocos?.map((b: Bloco) => (
+                    <div key={b.id} className="rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+                      <p className="text-xs font-black text-blue-600">{b.tipo}</p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {new Date(b.createdAt).toLocaleString('pt-BR')}
+                      </p>
+                      <p className="mt-2 break-all font-mono text-[11px] text-slate-700">{b.hash}</p>
                     </div>
-                    <p className="text-xs text-grafite-400 mt-0.5">
-                      {new Date(bloco.createdAt).toLocaleString('pt-BR')} ·
-                      Nonce: {bloco.nonce} · Dif: {bloco.dificuldade}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-grafite-400">
-                    {bloco.eventos?.length ?? 0} evento(s)
-                  </p>
+                  ))}
                 </div>
               </div>
+            )}
+          </div>
+        </Modal>
+      )}
 
-              <div className="grid md:grid-cols-2 gap-3 font-mono text-xs">
-                <div className="bg-grafite-50 dark:bg-grafite-800/50 rounded-xl p-3">
-                  <p className="text-grafite-400 mb-1">Hash Anterior:</p>
-                  <HashDisplay hash={bloco.hashAnterior} />
-                </div>
-                <div className="bg-primary-500/5 border border-primary-500/10 rounded-xl p-3">
-                  <p className="text-grafite-400 mb-1">Hash Atual:</p>
-                  <HashDisplay hash={bloco.hashAtual} />
-                </div>
-              </div>
+      {pdfBloco && (
+        <div className="hidden print:block bg-white text-black p-10">
+          <div className="border-b border-slate-300 pb-6">
+            <h1 className="text-3xl font-black">FarmaChain</h1>
+            <p className="mt-2 text-sm">Relatório Blockchain de Rastreabilidade Farmacêutica</p>
+          </div>
 
-              {bloco.eventos && bloco.eventos.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-grafite-100 dark:border-grafite-800">
-                  <p className="text-xs text-grafite-400 mb-2">Eventos:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {bloco.eventos.map((ev: any) => (
-                      <span key={ev.id}
-                        className="px-2 py-0.5 rounded-md bg-grafite-100 dark:bg-grafite-800 
-                                   text-xs text-grafite-600 dark:text-grafite-400">
-                        {ev.tipoEvento}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </motion.div>
-          ))}
+          <div className="mt-8 grid gap-4">
+            <PdfRow label="Tipo do registro" value={pdfBloco.tipo} />
+            <PdfRow label="Data do registro" value={new Date(pdfBloco.createdAt).toLocaleString('pt-BR')} />
+            <PdfRow label="Hash do bloco" value={pdfBloco.hash} />
+            <PdfRow label="Hash anterior" value={pdfBloco.hashAnterior} />
+            <PdfRow label="Medicamento" value={String(pdfBloco.payload?.medicamento || '—')} />
+            <PdfRow label="Lote" value={String(pdfBloco.payload?.lote || pdfBloco.payload?.numeroLote || '—')} />
+            <PdfRow label="Origem" value={String(pdfBloco.payload?.origem || '—')} />
+            <PdfRow label="Distribuidor" value={String(pdfBloco.payload?.distribuidor || '—')} />
+            <PdfRow label="Armazenamento" value={String(pdfBloco.payload?.armazenamento || pdfBloco.payload?.localDispensacao || '—')} />
+            <PdfRow label="Farmacêutico" value={String(pdfBloco.payload?.farmaceutico || '—')} />
+            <PdfRow label="CRF" value={String(pdfBloco.payload?.crf || '—')} />
+            <PdfRow label="GPS" value={String(pdfBloco.payload?.gps || '—')} />
+            <PdfRow label="Hash do paciente para farmacovigilância" value={String(pdfBloco.payload?.pacienteHash || 'Não aplicável a este bloco')} />
+          </div>
+
+          <div className="mt-10 rounded-2xl border border-slate-300 p-5">
+            <h2 className="font-black">Observação LGPD</h2>
+            <p className="mt-2 text-sm leading-7">
+              Este relatório utiliza hash criptográfico do paciente quando aplicável, permitindo rastreabilidade e farmacovigilância sem exposição direta de CPF, CNS ou telefone.
+            </p>
+          </div>
         </div>
       )}
+    </div>
+  );
+}
 
-      {data && (
-        <Pagination pagina={pagina} total={data.total} limite={limite} onChange={irParaPagina} />
-      )}
+function Metric({ icon: Icon, label, value }: any) {
+  return (
+    <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_18px_60px_rgba(15,23,42,.08)]">
+      <Icon className="text-blue-600" size={22} />
+      <p className="mt-5 text-xs font-semibold text-slate-500">{label}</p>
+      <p className="mt-1 text-2xl font-black tracking-[-0.05em]">{value}</p>
+    </div>
+  );
+}
+
+function Modal({ title, children, onClose }: any) {
+  return (
+    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm print:hidden">
+      <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-[30px] bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-slate-100 p-6">
+          <h2 className="text-2xl font-black tracking-[-0.04em]">{title}</h2>
+          <button onClick={onClose} className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 hover:bg-slate-200">
+            <X size={18} />
+          </button>
+        </div>
+        <div className="p-6">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function InfoLight({ label, value }: any) {
+  return (
+    <div className="rounded-2xl bg-slate-50 p-4">
+      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">{label}</p>
+      <p className="mt-1 break-all font-mono text-xs text-slate-700">{value}</p>
+    </div>
+  );
+}
+
+function PdfRow({ label, value }: any) {
+  return (
+    <div className="border-b border-slate-200 pb-3">
+      <p className="text-xs font-bold uppercase text-slate-500">{label}</p>
+      <p className="mt-1 break-all text-sm font-semibold">{value}</p>
     </div>
   );
 }

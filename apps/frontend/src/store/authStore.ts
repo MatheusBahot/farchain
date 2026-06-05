@@ -13,10 +13,11 @@ export interface Usuario {
 interface AuthState {
   usuario: Usuario | null;
   accessToken: string | null;
+  refreshToken: string | null;
   isAuthenticated: boolean;
-  setAuth: (usuario: Usuario, token: string) => void;
+  setAuth: (usuario: Usuario, accessToken: string, refreshToken?: string) => void;
   logout: () => void;
-  updateToken: (token: string) => void;
+  updateToken: (accessToken: string) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -24,21 +25,40 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       usuario: null,
       accessToken: null,
+      refreshToken: null,
       isAuthenticated: false,
 
-      setAuth: (usuario, accessToken) =>
-        set({ usuario, accessToken, isAuthenticated: true }),
+      setAuth: (usuario, accessToken, refreshToken = null as any) =>
+        set({
+          usuario,
+          accessToken,
+          refreshToken,
+          isAuthenticated: true,
+        }),
 
-      logout: () =>
-        set({ usuario: null, accessToken: null, isAuthenticated: false }),
+      logout: () => {
+        localStorage.removeItem('farchain-token');
+        localStorage.removeItem('farchain-refresh');
+        set({
+          usuario: null,
+          accessToken: null,
+          refreshToken: null,
+          isAuthenticated: false,
+        });
+      },
 
-      updateToken: (accessToken) => set({ accessToken }),
+      updateToken: (accessToken) =>
+        set({
+          accessToken,
+          isAuthenticated: true,
+        }),
     }),
     {
       name: 'farchain-auth',
       partialize: (state) => ({
         usuario: state.usuario,
         accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated,
       }),
     },

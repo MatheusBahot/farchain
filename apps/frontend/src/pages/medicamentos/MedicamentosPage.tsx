@@ -1,372 +1,369 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { motion } from 'framer-motion';
-import { Plus, Search, Pill, Thermometer, Filter, RefreshCw } from 'lucide-react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import toast from 'react-hot-toast';
-import { medicamentosApi } from '@services/api';
-import { Table } from '@components/ui/Table';
-import { Pagination } from '@components/ui/Pagination';
-import { Modal } from '@components/ui/Modal';
-import { Badge, BadgeClasseCEAF } from '@components/ui/Badge';
-import { Input } from '@components/ui/Input';
-import { Select } from '@components/ui/Select';
-import { PageSpinner } from '@components/ui/Spinner';
-import { EmptyState } from '@components/ui/EmptyState';
-import { useDebounce } from '@hooks/useDebounce';
-import { usePagination } from '@hooks/usePagination';
-import type { Medicamento } from '../../types';
+import { api } from '@services/api';
+import { useEffect, useState } from 'react';
+import {
+  ArrowRight,
+  Package,
+  Pill,
+  Plus,
+  QrCode,
+  Save,
+  ShieldCheck,
+  Thermometer,
+} from 'lucide-react';
 
-const schema = z.object({
-  dcb:                 z.string().min(2, 'DCB obrigatório'),
-  nomeComercial:       z.string().optional(),
-  principioAtivo:      z.string().min(2, 'Princípio ativo obrigatório'),
-  fabricante:          z.string().min(2, 'Fabricante obrigatório'),
-  distribuidor:        z.string().optional(),
-  registroSanitario:   z.string().optional(),
-  classeTerapeutica:   z.string().min(2, 'Classe terapêutica obrigatória'),
-  formaFarmaceutica:   z.string().min(1, 'Forma farmacêutica obrigatória'),
-  concentracao:        z.string().min(1, 'Concentração obrigatória'),
-  apresentacao:        z.string().min(1, 'Apresentação obrigatória'),
-  viaAdministracao:    z.string().optional(),
-  classeCEAF:          z.string().min(1, 'Classe CEAF obrigatória'),
-  protocoloClinico:    z.string().optional(),
-  cid10:               z.string().optional(),
-  temperaturaMin:      z.number().optional(),
-  temperaturaMax:      z.number().optional(),
-  requireCadeiaFria:   z.boolean().optional(),
-  condicoesArmazenamento: z.string().optional(),
-  custoCentral:        z.number().min(0).optional(),
-});
+type Registro = {
+  medicamento: string;
+  principioAtivo: string;
+  fabricante: string;
+  apresentacao: string;
+  concentracao: string;
+  classeTerapeutica: string;
+  componente: string;
+  registroAnvisa: string;
+  temperatura: string;
+  numeroLote: string;
+  validade: string;
+  origem: string;
+  distribuidor: string;
+  armazenamento: string;
+  temperaturaMinima: string;
+  temperaturaMaxima: string;
+  quantidadeInicial: string;
+  status: string;
+};
 
-type FormData = z.infer<typeof schema>;
-
-const formasFarmaceuticas = [
-  'COMPRIMIDO','CAPSULA','SOLUCAO_ORAL','SOLUCAO_INJETAVEL','SUSPENSAO_ORAL',
-  'POMADA','CREME','GEL','INALACAO','PO_INJETAVEL','FRASCO_AMPOLA',
-  'SERINGA_PREENCHIDA','CANETA_APLICADORA',
-].map(v => ({ value: v, label: v.replace(/_/g,' ') }));
-
-const classesCEAF = [
-  { value: 'COMPONENTE_I_A', label: 'Componente I-A' },
-  { value: 'COMPONENTE_I_B', label: 'Componente I-B' },
-  { value: 'COMPONENTE_II',  label: 'Componente II'  },
-  { value: 'COMPONENTE_III', label: 'Componente III' },
-];
+const vazio: Registro = {
+  medicamento: '',
+  principioAtivo: '',
+  fabricante: '',
+  apresentacao: '',
+  concentracao: '',
+  classeTerapeutica: '',
+  componente: '',
+  registroAnvisa: '',
+  temperatura: '',
+  numeroLote: '',
+  validade: '',
+  origem: '',
+  distribuidor: '',
+  armazenamento: '',
+  temperaturaMinima: '',
+  temperaturaMaxima: '',
+  quantidadeInicial: '',
+  status: '',
+};
 
 export default function MedicamentosPage() {
-  const qc = useQueryClient();
-  const [busca, setBusca] = useState('');
-  const [classeFiltro, setClasseFiltro] = useState('');
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editando, setEditando] = useState<Medicamento | null>(null);
-  const buscaDebounced = useDebounce(busca, 400);
-  const { pagina, limite, irParaPagina } = usePagination(15);
-
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: ['medicamentos', pagina, buscaDebounced, classeFiltro],
-    queryFn: () => medicamentosApi.listar({ pagina, limite, busca: buscaDebounced, classeCEAF: classeFiltro }),
+  const [open, setOpen] = useState(false);
+  const [registros, setRegistros] = useState<Registro[]>(() => {
+    const salvo = localStorage.getItem('farchain-medicamentos-lotes');
+    return salvo ? JSON.parse(salvo) : [];
   });
+  const [form, setForm] = useState<Registro>(vazio);
+  const [etapa, setEtapa] = useState(1);
 
-  const { data: stats } = useQuery({
-    queryKey: ['medicamentos', 'estatisticas'],
-    queryFn: medicamentosApi.estatisticas,
-  });
-
-  const { register, handleSubmit, reset, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
-    resolver: zodResolver(schema),
-  });
-
-  const criar = useMutation({
-    mutationFn: medicamentosApi.criar,
-    onSuccess: () => {
-      toast.success('Medicamento cadastrado com sucesso!');
-      qc.invalidateQueries({ queryKey: ['medicamentos'] });
-      fecharModal();
-    },
-    onError: (e: any) => toast.error(e?.response?.data?.message || 'Erro ao salvar'),
-  });
-
-  const atualizar = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: FormData }) =>
-      medicamentosApi.atualizar(id, data),
-    onSuccess: () => {
-      toast.success('Medicamento atualizado!');
-      qc.invalidateQueries({ queryKey: ['medicamentos'] });
-      fecharModal();
-    },
-    onError: (e: any) => toast.error(e?.response?.data?.message || 'Erro ao atualizar'),
-  });
-
-  const fecharModal = () => {
-    setModalOpen(false);
-    setEditando(null);
-    reset();
-  };
-
-  const abrirEdicao = (med: Medicamento) => {
-    setEditando(med);
-    Object.entries(med).forEach(([k, v]) => setValue(k as any, v));
-    setModalOpen(true);
-  };
-
-  const onSubmit = (data: FormData) => {
-    if (editando) {
-      atualizar.mutate({ id: editando.id, data });
-    } else {
-      criar.mutate(data);
+  async function carregarRegistros() {
+    try {
+      const response = await api.get('/tcc/medicamentos-lotes');
+      const lista = response.data?.data || response.data || [];
+      setRegistros(lista);
+    } catch (error) {
+      console.error('Erro ao carregar medicamentos/lotes', error);
     }
-  };
+  }
 
-  const columns = [
-    {
-      key: 'dcb',
-      label: 'DCB / Nome Comercial',
-      render: (row: Medicamento) => (
-        <div>
-          <p className="font-semibold text-grafite-900 dark:text-white">{row.dcb}</p>
-          {row.nomeComercial && (
-            <p className="text-xs text-grafite-400">{row.nomeComercial}</p>
-          )}
-        </div>
-      ),
-    },
-    {
-      key: 'classeCEAF',
-      label: 'Classe CEAF',
-      render: (row: Medicamento) => <BadgeClasseCEAF classe={row.classeCEAF} />,
-    },
-    {
-      key: 'formaFarmaceutica',
-      label: 'Forma',
-      render: (row: Medicamento) => (
-        <span className="text-sm text-grafite-600 dark:text-grafite-400">
-          {row.formaFarmaceutica.replace(/_/g, ' ')}
-        </span>
-      ),
-    },
-    {
-      key: 'concentracao',
-      label: 'Concentração',
-      render: (row: Medicamento) => (
-        <span className="font-mono text-sm">{row.concentracao}</span>
-      ),
-    },
-    {
-      key: 'requireCadeiaFria',
-      label: 'Cadeia Fria',
-      render: (row: Medicamento) =>
-        row.requireCadeiaFria ? (
-          <Badge variant="primary">
-            <Thermometer size={11} /> ❄ Sim
-          </Badge>
-        ) : (
-          <Badge variant="gray">Não</Badge>
-        ),
-    },
-    {
-      key: 'custoCentral',
-      label: 'Custo (R$)',
-      render: (row: Medicamento) => (
-        <span className="font-semibold text-grafite-800 dark:text-grafite-200">
-          {row.custoCentral
-            ? row.custoCentral.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-            : '—'}
-        </span>
-      ),
-    },
-    {
-      key: 'lotes',
-      label: 'Lotes',
-      render: (row: Medicamento) => (
-        <Badge variant={row._count?.lotes ? 'teal' : 'gray'}>
-          {row._count?.lotes ?? 0}
-        </Badge>
-      ),
-    },
-    {
-      key: 'acoes',
-      label: '',
-      render: (row: Medicamento) => (
-        <button
-          onClick={(e) => { e.stopPropagation(); abrirEdicao(row); }}
-          className="text-xs text-primary-600 dark:text-primary-400 
-                     hover:underline font-medium px-2 py-1"
-        >
-          Editar
-        </button>
-      ),
-    },
-  ];
+  useEffect(() => {
+    carregarRegistros();
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('farchain-medicamentos-lotes', JSON.stringify(registros));
+  }, [registros]);
+
+  async function salvar() {
+    if (!form.medicamento.trim() || !form.numeroLote.trim()) {
+      alert('Preencha pelo menos Medicamento e Número do lote.');
+      return;
+    }
+
+    const novoRegistro = {
+      ...form,
+      status: form.status || 'Ativo',
+    };
+
+    setRegistros((prev) => [novoRegistro, ...prev]);
+    localStorage.setItem(
+      'farchain-medicamentos-lotes',
+      JSON.stringify([novoRegistro, ...registros]),
+    );
+
+    setForm(vazio);
+    setOpen(false);
+
+    alert('Medicamento e lote registrados com sucesso.');
+  }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-grafite-900 dark:text-white">Medicamentos CEAF</h1>
-          <p className="text-grafite-500 text-sm mt-0.5">
-            Cadastro do Componente Especializado da Assistência Farmacêutica
-          </p>
-        </div>
-        <button onClick={() => setModalOpen(true)} className="btn-primary">
-          <Plus size={16} /> Novo Medicamento
-        </button>
-      </div>
+    <div className="space-y-5 text-slate-950">
+      <section className="rounded-[30px] border border-slate-200 bg-white p-8 shadow-[0_18px_60px_rgba(15,23,42,.08)]">
+        <p className="text-[11px] font-black uppercase tracking-[0.25em] text-blue-600">
+          Cadastro integrado
+        </p>
 
-      {/* Stats mini */}
-      {stats && (
-        <div className="grid grid-cols-3 gap-4">
-          {[
-            { label: 'Total de medicamentos', valor: stats.total, cor: 'text-primary-500' },
-            { label: 'Requerem cadeia fria', valor: stats.cadeiaFria, cor: 'text-teal-500' },
-            { label: 'Classes CEAF', valor: stats.porClasse?.length ?? 4, cor: 'text-warning-500' },
-          ].map(s => (
-            <div key={s.label} className="card p-4 text-center">
-              <p className={`text-2xl font-bold ${s.cor}`}>{s.valor}</p>
-              <p className="text-xs text-grafite-400 mt-1">{s.label}</p>
+        <div className="mt-4 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <h1 className="text-4xl font-black leading-tight tracking-[-0.055em] md:text-5xl">
+              Medicamento + lote.
+            </h1>
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-600">
+              Registre primeiro o medicamento e o respectivo lote. Depois esse
+              registro seguirá para movimentação, dispensação e validação na blockchain.
+            </p>
+          </div>
+
+          <button
+            onClick={() => {
+              setForm(vazio);
+              setEtapa(1); setOpen(true);
+            }}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-xl shadow-blue-600/20 hover:bg-blue-500"
+          >
+            <Plus size={17} />
+            Novo medicamento + lote
+          </button>
+        </div>
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-4">
+        <Metric icon={Pill} label="Medicamentos" value={String(registros.length)} />
+        <Metric icon={Package} label="Lotes vinculados" value={String(registros.length)} />
+        <Metric icon={Thermometer} label="Cadeia fria" value="Monitorada" />
+        <Metric icon={ShieldCheck} label="Rastreabilidade" value="Ativa" />
+      </section>
+
+      <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_18px_60px_rgba(15,23,42,.08)]">
+        <h2 className="text-lg font-black">Registros cadastrados</h2>
+        <p className="mt-1 text-xs text-slate-500">
+          Os medicamentos e lotes salvos aparecerão aqui.
+        </p>
+
+        {registros.length === 0 ? (
+          <div className="mt-6 rounded-[24px] border border-dashed border-slate-300 bg-slate-50 p-10 text-center">
+            <QrCode className="mx-auto text-slate-400" size={34} />
+            <h3 className="mt-4 text-xl font-black">Nenhum medicamento cadastrado</h3>
+            <p className="mt-2 text-sm text-slate-500">
+              Clique em “Novo medicamento + lote” para iniciar o fluxo.
+            </p>
+          </div>
+        ) : (
+          <div className="mt-6 grid gap-5">
+            {registros.map((r, index) => (
+              <div key={`${r.numeroLote}-${index}`} className="rounded-[26px] bg-slate-50 p-5 ring-1 ring-slate-200">
+                <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-600">
+                      {r.componente || 'Componente não informado'} · {r.status || 'Status não informado'}
+                    </p>
+                    <h3 className="mt-3 text-3xl font-black tracking-[-0.05em]">
+                      {r.medicamento}
+                    </h3>
+                    <p className="mt-2 text-sm text-slate-500">
+                      {r.apresentacao || 'Apresentação não informada'} · {r.concentracao || 'Concentração não informada'}
+                    </p>
+                  </div>
+
+                  <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-white text-blue-600 shadow-sm">
+                    <QrCode size={30} />
+                  </div>
+                </div>
+
+                <div className="mt-6 grid gap-5 lg:grid-cols-2">
+                  <InfoBlock
+                    title="Medicamento"
+                    icon={Pill}
+                    items={[
+                      ['Medicamento', r.medicamento],
+                      ['Princípio ativo', r.principioAtivo],
+                      ['Fabricante', r.fabricante],
+                      ['Apresentação', r.apresentacao],
+                      ['Concentração', r.concentracao],
+                      ['Classe terapêutica', r.classeTerapeutica],
+                      ['Componente', r.componente],
+                      ['Registro ANVISA', r.registroAnvisa],
+                      ['Temperatura', r.temperatura],
+                    ]}
+                  />
+
+                  <InfoBlock
+                    title="Lote"
+                    icon={Package}
+                    items={[
+                      ['Número do lote', r.numeroLote],
+                      ['Validade', r.validade],
+                      ['Origem', r.origem],
+                      ['Distribuidor', r.distribuidor],
+                      ['Armazenamento', r.armazenamento],
+                      ['Temperatura mínima', r.temperaturaMinima],
+                      ['Temperatura máxima', r.temperaturaMaxima],
+                      ['Quantidade inicial', r.quantidadeInicial],
+                      ['Status', r.status],
+                    ]}
+                  />
+                </div>
+
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <a href="/movimentacoes" className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2 text-xs font-black text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100">
+                    Movimentar <ArrowRight size={14} />
+                  </a>
+                  <a href="/dispensacoes" className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2 text-xs font-black text-white hover:bg-blue-500">
+                    Dispensar <ArrowRight size={14} />
+                  </a>
+                  <a href="/blockchain" className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white hover:bg-slate-800">
+                    Ver blockchain <ArrowRight size={14} />
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {open && (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+          <div className="max-h-[92vh] w-full max-w-6xl overflow-y-auto rounded-[30px] bg-white shadow-2xl">
+            <div className="border-b border-slate-100 p-6">
+              <p className="text-[11px] font-black uppercase tracking-[0.25em] text-blue-600">
+                Etapa {etapa} de 2
+              </p>
+              <h2 className="mt-2 text-3xl font-black tracking-[-0.04em]">
+                {etapa === 1 ? 'Dados do medicamento' : 'Dados do lote'}
+              </h2>
+
+              <div className="mt-5 grid grid-cols-2 gap-3">
+                <div className={`h-2 rounded-full ${etapa >= 1 ? 'bg-blue-600' : 'bg-slate-200'}`} />
+                <div className={`h-2 rounded-full ${etapa >= 2 ? 'bg-blue-600' : 'bg-slate-200'}`} />
+              </div>
             </div>
-          ))}
-        </div>
-      )}
 
-      {/* Filtros */}
-      <div className="card p-4 flex flex-col sm:flex-row gap-3">
-        <Input
-          placeholder="Buscar por DCB, nome comercial, princípio ativo..."
-          value={busca}
-          onChange={e => { setBusca(e.target.value); irParaPagina(1); }}
-          leftIcon={<Search size={16} />}
-          className="flex-1"
-        />
-        <Select
-          options={classesCEAF}
-          placeholder="Todas as classes"
-          value={classeFiltro}
-          onChange={e => { setClasseFiltro(e.target.value); irParaPagina(1); }}
-          className="sm:w-52"
-        />
-        <button onClick={() => refetch()} className="btn-ghost p-2.5 rounded-xl">
-          <RefreshCw size={16} />
-        </button>
-      </div>
+            <div className="p-6">
+              {etapa === 1 ? (
+                <FormBlock title="Medicamento" icon={Pill}>
+                  <Input label="Medicamento" value={form.medicamento} onChange={(v: string) => setForm({ ...form, medicamento: v })} />
+                  <Input label="Princípio ativo" value={form.principioAtivo} onChange={(v: string) => setForm({ ...form, principioAtivo: v })} />
+                  <Input label="Fabricante" value={form.fabricante} onChange={(v: string) => setForm({ ...form, fabricante: v })} />
+                  <Input label="Apresentação" value={form.apresentacao} onChange={(v: string) => setForm({ ...form, apresentacao: v })} />
+                  <Input label="Concentração" value={form.concentracao} onChange={(v: string) => setForm({ ...form, concentracao: v })} />
+                  <Input label="Classe terapêutica" value={form.classeTerapeutica} onChange={(v: string) => setForm({ ...form, classeTerapeutica: v })} />
+                  <Input label="Componente" value={form.componente} onChange={(v: string) => setForm({ ...form, componente: v })} />
+                  <Input label="Registro ANVISA" value={form.registroAnvisa} onChange={(v: string) => setForm({ ...form, registroAnvisa: v })} />
+                  <Input label="Temperatura" value={form.temperatura} onChange={(v: string) => setForm({ ...form, temperatura: v })} />
+                </FormBlock>
+              ) : (
+                <FormBlock title="Lote" icon={Package}>
+                  <Input label="Número do lote" value={form.numeroLote} onChange={(v: string) => setForm({ ...form, numeroLote: v })} />
+                  <Input label="Validade" value={form.validade} onChange={(v: string) => setForm({ ...form, validade: v })} />
+                  <Input label="Origem" value={form.origem} onChange={(v: string) => setForm({ ...form, origem: v })} />
+                  <Input label="Distribuidor" value={form.distribuidor} onChange={(v: string) => setForm({ ...form, distribuidor: v })} />
+                  <Input label="Armazenamento" value={form.armazenamento} onChange={(v: string) => setForm({ ...form, armazenamento: v })} />
+                  <Input label="Temperatura mínima" value={form.temperaturaMinima} onChange={(v: string) => setForm({ ...form, temperaturaMinima: v })} />
+                  <Input label="Temperatura máxima" value={form.temperaturaMaxima} onChange={(v: string) => setForm({ ...form, temperaturaMaxima: v })} />
+                  <Input label="Quantidade inicial" value={form.quantidadeInicial} onChange={(v: string) => setForm({ ...form, quantidadeInicial: v })} />
+                  <Input label="Status" value={form.status} onChange={(v: string) => setForm({ ...form, status: v })} />
+                </FormBlock>
+              )}
+            </div>
 
-      {/* Tabela */}
-      {isLoading ? (
-        <PageSpinner />
-      ) : !data?.dados?.length ? (
-        <div className="card">
-          <EmptyState
-            icon={Pill}
-            titulo="Nenhum medicamento encontrado"
-            descricao="Ajuste os filtros ou cadastre o primeiro medicamento CEAF."
-            action={
-              <button onClick={() => setModalOpen(true)} className="btn-primary">
-                <Plus size={16} /> Cadastrar medicamento
+            <div className="flex justify-between gap-3 border-t border-slate-100 p-6">
+              <button
+                type="button"
+                onClick={() => etapa === 1 ? setOpen(false) : setEtapa(1)}
+                className="rounded-2xl bg-slate-100 px-5 py-3 text-sm font-black text-slate-700 hover:bg-slate-200"
+              >
+                {etapa === 1 ? 'Cancelar' : 'Voltar'}
               </button>
-            }
-          />
-        </div>
-      ) : (
-        <>
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <Table
-              columns={columns}
-              data={data.dados}
-              onRowClick={abrirEdicao}
-            />
-          </motion.div>
-          <Pagination
-            pagina={pagina}
-            total={data.total}
-            limite={limite}
-            onChange={irParaPagina}
-          />
-        </>
-      )}
 
-      {/* Modal de cadastro/edição */}
-      <Modal
-        open={modalOpen}
-        onClose={fecharModal}
-        titulo={editando ? 'Editar Medicamento' : 'Novo Medicamento CEAF'}
-        size="xl"
-      >
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-          <div className="grid grid-cols-2 gap-4">
-            <Input label="DCB *" placeholder="Ex: ADALIMUMABE"
-              {...register('dcb')} error={errors.dcb?.message} />
-            <Input label="Nome Comercial" placeholder="Ex: Humira"
-              {...register('nomeComercial')} />
-            <Input label="Princípio Ativo *" placeholder="Ex: adalimumabe"
-              {...register('principioAtivo')} error={errors.principioAtivo?.message} />
-            <Input label="Fabricante *" placeholder="Ex: AbbVie"
-              {...register('fabricante')} error={errors.fabricante?.message} />
-            <Input label="Distribuidor" placeholder="Ex: AbbVie Brasil"
-              {...register('distribuidor')} />
-            <Input label="Registro Sanitário ANVISA"
-              placeholder="Ex: 1.2345.0001.001-1"
-              {...register('registroSanitario')} />
-            <Input label="Classe Terapêutica *"
-              placeholder="Ex: Imunossupressor / Anti-TNF"
-              {...register('classeTerapeutica')} error={errors.classeTerapeutica?.message} />
-            <Select
-              label="Forma Farmacêutica *"
-              options={formasFarmaceuticas}
-              placeholder="Selecionar..."
-              {...register('formaFarmaceutica')} error={errors.formaFarmaceutica?.message} />
-            <Input label="Concentração *" placeholder="Ex: 40mg/0,8mL"
-              {...register('concentracao')} error={errors.concentracao?.message} />
-            <Input label="Apresentação *" placeholder="Ex: 2 seringas preenchidas"
-              {...register('apresentacao')} error={errors.apresentacao?.message} />
-            <Input label="Via de Administração" placeholder="Ex: Subcutânea"
-              {...register('viaAdministracao')} />
-            <Select
-              label="Classe CEAF *"
-              options={classesCEAF}
-              placeholder="Selecionar..."
-              {...register('classeCEAF')} error={errors.classeCEAF?.message} />
-            <Input label="Protocolo Clínico"
-              placeholder="Ex: PCDT Artrite Reumatoide"
-              {...register('protocoloClinico')} />
-            <Input label="CID-10" placeholder="Ex: M05,M06,K50"
-              {...register('cid10')} />
-            <Input label="Temperatura Mínima (°C)" type="number"
-              placeholder="Ex: 2"
-              {...register('temperaturaMin', { valueAsNumber: true })} />
-            <Input label="Temperatura Máxima (°C)" type="number"
-              placeholder="Ex: 8"
-              {...register('temperaturaMax', { valueAsNumber: true })} />
-            <Input label="Custo Central (R$)" type="number" step="0.01"
-              placeholder="Ex: 4521.00"
-              {...register('custoCentral', { valueAsNumber: true })} />
-            <div className="flex items-center gap-3 pt-6">
-              <input type="checkbox" id="cadeiaFria"
-                {...register('requireCadeiaFria')}
-                className="w-4 h-4 accent-primary-600" />
-              <label htmlFor="cadeiaFria"
-                className="text-sm text-grafite-700 dark:text-grafite-300">
-                Requer cadeia fria ❄
-              </label>
+              {etapa === 1 ? (
+                <button
+                  type="button"
+                  onClick={() => setEtapa(2)}
+                  className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white hover:bg-blue-500"
+                >
+                  Próximo
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={salvar}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white hover:bg-blue-500"
+                >
+                  <Save size={17} />
+                  Registrar medicamento + lote
+                </button>
+              )}
             </div>
           </div>
-          <Input
-            label="Condições de Armazenamento"
-            placeholder="Ex: Refrigerado entre 2°C e 8°C. Não congelar."
-            {...register('condicoesArmazenamento')}
-          />
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={fecharModal} className="btn-ghost flex-1">
-              Cancelar
-            </button>
-            <button type="submit" disabled={isSubmitting} className="btn-primary flex-1 justify-center">
-              {isSubmitting ? 'Salvando...' : editando ? 'Atualizar' : 'Cadastrar'}
-            </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Metric({ icon: Icon, label, value }: any) {
+  return (
+    <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_18px_60px_rgba(15,23,42,.08)]">
+      <Icon className="text-blue-600" size={22} />
+      <p className="mt-5 text-xs font-semibold text-slate-500">{label}</p>
+      <p className="mt-1 text-2xl font-black tracking-[-0.05em]">{value}</p>
+    </div>
+  );
+}
+
+function InfoBlock({ title, icon: Icon, items }: any) {
+  return (
+    <div className="rounded-[24px] bg-white p-5 ring-1 ring-slate-200">
+      <div className="mb-5 flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+          <Icon size={18} />
+        </div>
+        <h4 className="font-black">{title}</h4>
+      </div>
+
+      <div className="grid gap-3">
+        {items.map(([label, value]: [string, string]) => (
+          <div key={label} className="flex items-start justify-between gap-4 border-b border-slate-100 pb-2 last:border-0">
+            <p className="text-xs font-bold text-slate-400">{label}</p>
+            <p className="text-right text-xs font-black text-slate-700">{value || '—'}</p>
           </div>
-        </form>
-      </Modal>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FormBlock({ title, icon: Icon, children }: any) {
+  return (
+    <div className="rounded-[24px] bg-slate-50 p-5">
+      <div className="mb-5 flex items-center gap-3">
+        <Icon className="text-blue-600" />
+        <h3 className="font-black">{title}</h3>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function Input({ label, value, onChange }: any) {
+  return (
+    <div className="mb-4">
+      <label className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-500">
+        {label}
+      </label>
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={label}
+        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500"
+      />
     </div>
   );
 }

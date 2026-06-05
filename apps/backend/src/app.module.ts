@@ -1,3 +1,5 @@
+import { TccModule } from './tcc/tcc.module';
+import { HealthController } from './health/health.controller';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -21,7 +23,8 @@ import { TemperaturaModule } from './modules/temperatura/temperatura.module';
 import appConfig from './config/app.config';
 
 @Module({
-  imports: [
+  controllers: [HealthController],
+  imports: [TccModule, 
     // Configuração global de env
     ConfigModule.forRoot({
       isGlobal: true,

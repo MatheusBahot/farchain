@@ -2,94 +2,70 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Variáveis CSS ── */
-@layer base {
-  :root {
-    --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
-    --font-display: 'Sora', 'Plus Jakarta Sans', sans-serif;
-    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
-  }
-
-  html { scroll-behavior: smooth; }
-
-  body {
-    font-family: var(--font-sans);
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    @apply bg-grafite-950 text-white;
-  }
-
-  .dark body {
-    @apply bg-grafite-950 text-white;
-  }
-
-  /* Scrollbar */
-  ::-webkit-scrollbar { width: 5px; height: 5px; }
-  ::-webkit-scrollbar-track { @apply bg-grafite-900; }
-  ::-webkit-scrollbar-thumb { @apply bg-grafite-700 rounded-full; }
-
-  /* Focus ring */
-  :focus-visible {
-    @apply outline-2 outline-primary-500 outline-offset-2 rounded;
-  }
+* {
+  box-sizing: border-box;
 }
 
-/* ── Componentes ── */
-@layer components {
+html {
+  scroll-behavior: smooth;
+}
 
-  /* Botões */
-  .btn-primary {
-    @apply inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm
-           text-white bg-primary-600 hover:bg-primary-500
-           transition-all duration-200 shadow-sm
-           disabled:opacity-50 disabled:cursor-not-allowed
-           focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2
-           focus-visible:ring-offset-grafite-950;
-  }
+body {
+  margin: 0;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #000;
+  color: white;
+  -webkit-font-smoothing: antialiased;
+}
 
-  .btn-secondary {
-    @apply inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm
-           border border-primary-500/40 text-primary-400
-           hover:bg-primary-500/10 hover:border-primary-500/60
-           transition-all duration-200;
-  }
+.apple-nav {
+  background: rgba(22, 22, 23, 0.82);
+  backdrop-filter: saturate(180%) blur(24px);
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+}
 
-  .btn-ghost {
-    @apply inline-flex items-center gap-2 px-3 py-2 rounded-lg font-medium text-sm
-           text-grafite-400 hover:text-grafite-200 hover:bg-white/5
-           transition-all duration-150;
-  }
+.apple-hero-glow {
+  background:
+    radial-gradient(circle at 50% 18%, rgba(96,165,250,.38), transparent 26%),
+    radial-gradient(circle at 50% 34%, rgba(45,212,191,.18), transparent 34%),
+    radial-gradient(circle at 50% 8%, rgba(255,255,255,.20), transparent 18%),
+    #000;
+}
 
-  /* Cards */
-  .card {
-    @apply bg-grafite-900 border border-grafite-800 rounded-2xl;
-  }
+.text-premium {
+  background: linear-gradient(180deg, #fff 0%, #dbeafe 45%, #60a5fa 100%);
+  -webkit-background-clip: text;
+  color: transparent;
+}
 
-  .card-hover {
-    @apply card cursor-pointer hover:border-grafite-700
-           hover:shadow-card-hover transition-all duration-300;
-  }
+.app-shell {
+  background: #f5f5f7;
+  color: #111827;
+}
 
-  /* Inputs */
-  .input {
-    @apply w-full px-4 py-2.5 rounded-xl text-sm
-           bg-grafite-800 border border-grafite-700
-           text-white placeholder-grafite-500
-           focus:outline-none focus:ring-2 focus:ring-primary-500/30
-           focus:border-primary-500 transition-all duration-200;
-  }
+.app-card {
+  background: rgba(255,255,255,.86);
+  border: 1px solid rgba(15,23,42,.08);
+  box-shadow: 0 18px 60px rgba(15,23,42,.08);
+  border-radius: 24px;
+}
 
-  /* Gradiente de texto */
-  .text-gradient {
-    @apply bg-gradient-to-r from-primary-400 to-teal-400 bg-clip-text text-transparent;
-  }
+.app-soft {
+  background: linear-gradient(180deg, #ffffff, #f7f8fb);
+  border: 1px solid rgba(15,23,42,.08);
+  border-radius: 22px;
+}
 
-  /* Skeleton loader */
-  .skeleton {
-    @apply animate-pulse bg-grafite-800 rounded-xl;
-  }
+.app-nav-active {
+  background: #eef4ff;
+  color: #2563eb;
+}
 
-  /* No scrollbar */
-  .no-scrollbar::-webkit-scrollbar { display: none; }
-  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.app-nav-item {
+  color: #334155;
+}
+
+.app-nav-item:hover {
+  background: #f1f5f9;
+  color: #0f172a;
 }

@@ -1,362 +1,265 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import {
-  Eye, EyeOff, LogIn, Shield, Loader2,
-  Lock, Link2, CheckCircle2, Activity,
-} from 'lucide-react';
 import toast from 'react-hot-toast';
+import {
+  ArrowRight,
+  Eye,
+  EyeOff,
+  Link2,
+  Loader2,
+  Lock,
+  Shield,
+  CheckCircle2,
+  Activity,
+} from 'lucide-react';
 import { authApi } from '@services/api';
 import { useAuthStore } from '@store/authStore';
 
-const schema = z.object({
-  email: z.string().email('E-mail inválido'),
-  senha: z.string().min(6, 'Senha obrigatória'),
-});
-type Form = z.infer<typeof schema>;
-
 const demos = [
-  { label: 'Admin',         email: 'admin@farchain.gov.br',         role: 'SUPER_ADMIN' },
-  { label: 'Farmacêutico',  email: 'farmaceutico@farchain.gov.br',   role: 'FARMACEUTICO' },
-  { label: 'Auditor',       email: 'auditor@farchain.gov.br',        role: 'AUDITOR' },
-  { label: 'Gestora',       email: 'gestora@farchain.gov.br',        role: 'GESTOR_MUNICIPAL' },
+  { label: 'Admin', email: 'admin@farchain.gov.br', role: 'SUPER_ADMIN' },
+  { label: 'Farmacêutico', email: 'farmaceutico@farchain.gov.br', role: 'FARMACEUTICO' },
+  { label: 'Gestora', email: 'gestora@farchain.gov.br', role: 'GESTOR_MUNICIPAL' },
+  { label: 'Auditor', email: 'auditor@farchain.gov.br', role: 'AUDITOR' },
 ];
 
 const features = [
-  { icon: Link2,        label: 'Blockchain SHA-256', desc: 'Ledger imutável permissionado' },
-  { icon: Shield,       label: 'LGPD Compliant',     desc: 'CPF anonimizado via hash' },
-  { icon: Activity,     label: 'Tempo real',          desc: 'Monitoramento contínuo' },
-  { icon: CheckCircle2, label: '100% Auditável',      desc: 'Trilha completa de eventos' },
+  { icon: Link2, label: 'Blockchain SHA-256' },
+  { icon: Shield, label: 'LGPD' },
+  { icon: Activity, label: 'Tempo real' },
+  { icon: CheckCircle2, label: 'Auditoria' },
 ];
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const { setAuth } = useAuthStore();
+
+  const [email, setEmail] = useState('admin@farchain.gov.br');
+  const [senha, setSenha] = useState('FarChain@2024');
   const [showSenha, setShowSenha] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const {
-    register, handleSubmit, setValue,
-    formState: { errors },
-  } = useForm<Form>({ resolver: zodResolver(schema) });
-
-  const onSubmit = async (data: Form) => {
+  async function entrar(e: React.FormEvent) {
+    e.preventDefault();
     setLoading(true);
+
     try {
-      const result = await authApi.login(data.email, data.senha);
+      const result = await authApi.login(email, senha);
 
-      // Suporta dois formatos de resposta possíveis
-      const usuario     = result?.usuario     || result?.user     || result;
-      const accessToken = result?.accessToken || result?.token    || '';
-      const refreshToken= result?.refreshToken || '';
+      console.log('LOGIN RESPONSE:', result);
 
-      if (!accessToken) throw new Error('Token não recebido');
+      const usuario =
+        result?.usuario ||
+        result?.user ||
+        result?.data?.usuario ||
+        result?.data?.user;
 
-      setAuth(usuario, accessToken);
-      if (refreshToken) localStorage.setItem('farchain-refresh', refreshToken);
+      const accessToken =
+        result?.accessToken ||
+        result?.access_token ||
+        result?.token ||
+        result?.data?.accessToken ||
+        result?.data?.access_token ||
+        result?.data?.token;
 
-      toast.success(`Bem-vindo, ${usuario?.nome?.split(' ')[0] || 'usuário'}!`);
-      navigate('/dashboard');
-    } catch (err: any) {
-      const msg = err?.response?.data?.message;
-      if (Array.isArray(msg)) {
-        toast.error(msg[0]);
-      } else {
-        toast.error(msg || 'E-mail ou senha incorretos');
+      const refreshToken =
+        result?.refreshToken ||
+        result?.refresh_token ||
+        result?.data?.refreshToken ||
+        result?.data?.refresh_token;
+
+      if (!accessToken) {
+        console.error('Resposta sem token:', result);
+        throw new Error('Token não recebido');
       }
+
+      const usuarioFinal =
+        usuario || {
+          id: 'local',
+          nome: email.split('@')[0],
+          email,
+          role: 'USUARIO',
+        };
+
+      setAuth(usuarioFinal, accessToken, refreshToken);
+
+      localStorage.setItem('farchain-token', accessToken);
+
+      if (refreshToken) {
+        localStorage.setItem('farchain-refresh', refreshToken);
+      }
+
+      toast.success(`Bem-vindo, ${usuarioFinal.nome?.split(' ')[0] || 'usuário'}!`);
+
+      navigate('/dashboard', { replace: true });
+    } catch (err: any) {
+      console.error('LOGIN ERROR:', err);
+      const msg =
+        err?.response?.data?.message ||
+        err?.response?.data?.erro ||
+        err?.message ||
+        'E-mail ou senha incorretos';
+
+      toast.error(Array.isArray(msg) ? msg[0] : msg);
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const preencherDemo = (email: string) => {
-    setValue('email', email);
-    setValue('senha', 'FarChain@2024');
-  };
+  function preencherDemo(emailDemo: string) {
+    setEmail(emailDemo);
+    setSenha('FarChain@2024');
+  }
 
   return (
-    <div className="min-h-screen bg-grafite-950 flex">
-
-      {/* ── Painel esquerdo — visual ── */}
-      <div className="hidden lg:flex flex-col w-[55%] relative overflow-hidden">
-
-        {/* Fundo com gradiente e grid */}
-        <div className="absolute inset-0 bg-gradient-to-br from-grafite-950 via-primary-950/40 to-grafite-900" />
-        <div className="absolute inset-0 bg-grid-pattern opacity-30" />
-
-        {/* Blobs decorativos */}
-        <div className="absolute top-1/4 -left-20 w-96 h-96 rounded-full
-                        bg-primary-600/15 blur-3xl animate-pulse-slow" />
-        <div className="absolute bottom-1/3 right-0 w-80 h-80 rounded-full
-                        bg-teal-500/15 blur-3xl animate-float" />
-
-        <div className="relative z-10 flex flex-col h-full px-14 py-12">
-
-          {/* Logo */}
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-teal-500
-                            flex items-center justify-center shadow-glow-blue">
-              <Link2 size={18} className="text-white" />
+    <main className="min-h-screen bg-[#05070d] text-white grid lg:grid-cols-[1.1fr_0.9fr]">
+      <section className="hidden lg:flex relative overflow-hidden p-14">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(59,130,246,0.28),transparent_32%),radial-gradient(circle_at_80%_70%,rgba(20,184,166,0.20),transparent_34%)]" />
+        <div className="relative z-10 flex flex-col justify-between w-full">
+          <Link to="/" className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-2xl bg-white text-[#05070d] flex items-center justify-center">
+              <Link2 size={18} />
             </div>
-            <div>
-              <span className="font-display font-bold text-white text-xl leading-none">
-                Far<span className="text-primary-400">Chain</span>
-              </span>
-              <p className="text-[10px] text-grafite-500 leading-none">CEAF · SUS · ANVISA</p>
-            </div>
-          </div>
+            <span className="text-xl font-black">
+              Farma<span className="text-primary-400">Chain</span>
+            </span>
+          </Link>
 
-          {/* Conteúdo central */}
-          <div className="flex-1 flex flex-col justify-center max-w-lg">
-
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
+          <div className="max-w-xl">
+            <motion.p
+              initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
+              className="inline-flex rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs uppercase tracking-[0.22em] text-primary-300"
             >
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full
-                              bg-primary-500/10 border border-primary-500/20 mb-6">
-                <span className="w-1.5 h-1.5 rounded-full bg-primary-400 animate-pulse" />
-                <span className="text-xs text-primary-300 font-medium">
-                  Blockchain Permissionado · SHA-256
-                </span>
-              </div>
+              CEAF · SUS · Blockchain
+            </motion.p>
 
-              <h1 className="font-display text-[2.8rem] font-bold text-white leading-[1.1] mb-5">
-                Rastreabilidade<br />farmacêutica de<br />
-                <span className="text-gradient">padrão mundial</span>
-              </h1>
-
-              <p className="text-grafite-400 text-lg leading-relaxed">
-                Plataforma integrada de auditoria, transparência e
-                segurança para medicamentos do Componente Especializado
-                da Assistência Farmacêutica — CEAF/SUS.
-              </p>
-            </motion.div>
-
-            {/* Features grid */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
+            <motion.h1
+              initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              className="grid grid-cols-2 gap-3 mt-10"
+              transition={{ delay: 0.08 }}
+              className="mt-7 text-6xl font-black leading-none tracking-[-0.06em]"
             >
-              {features.map((f) => (
-                <div key={f.label}
-                  className="flex items-start gap-3 p-4 rounded-2xl
-                             bg-white/[0.03] border border-white/[0.07]
-                             hover:border-primary-500/20 transition-colors duration-300">
-                  <div className="w-8 h-8 rounded-lg bg-primary-500/10 border border-primary-500/20
-                                  flex items-center justify-center shrink-0">
-                    <f.icon size={15} className="text-primary-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-white">{f.label}</p>
-                    <p className="text-xs text-grafite-500 mt-0.5">{f.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </motion.div>
+              Entrar na cadeia de rastreabilidade.
+            </motion.h1>
 
-            {/* Chain visual */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
-              className="mt-8 flex items-center gap-2"
-            >
-              {['Fabricante','CAF','Unidade','Paciente'].map((s, i, arr) => (
-                <div key={s} className="flex items-center gap-2">
-                  <div className="px-3 py-1.5 rounded-lg bg-white/[0.05] border border-white/[0.08]
-                                  text-xs text-grafite-400 font-medium whitespace-nowrap">
-                    {s}
-                  </div>
-                  {i < arr.length - 1 && (
-                    <div className="flex items-center gap-0.5">
-                      <div className="w-4 h-px bg-primary-500/40" />
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary-500/60" />
-                      <div className="w-4 h-px bg-primary-500/40" />
-                    </div>
-                  )}
-                </div>
-              ))}
-            </motion.div>
-            <p className="text-xs text-grafite-600 mt-2">
-              ⛓ Cada etapa registrada imutavelmente no blockchain
+            <p className="mt-6 text-lg leading-8 text-grafite-300">
+              Gestão de medicamentos, lotes, movimentações, dispensações,
+              farmacovigilância e auditoria imutável em um só ambiente.
             </p>
+
+            <div className="mt-10 grid grid-cols-2 gap-4">
+              {features.map((f) => (
+                <div key={f.label} className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
+                  <f.icon className="text-primary-300 mb-4" size={22} />
+                  <p className="font-bold">{f.label}</p>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <p className="text-xs text-grafite-700">
-            © {new Date().getFullYear()} FarChain · Salvador, BA · Brasil
+          <p className="text-xs text-grafite-600">
+            © {new Date().getFullYear()} FarmaChain · Salvador, BA
           </p>
         </div>
-      </div>
+      </section>
 
-      {/* ── Painel direito — formulário ── */}
-      <div className="flex-1 flex items-center justify-center px-8 py-12
-                      bg-grafite-950 border-l border-grafite-800/50">
+      <section className="flex items-center justify-center p-6">
         <motion.div
-          initial={{ opacity: 0, x: 30 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
-          className="w-full max-w-md"
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-md rounded-[2rem] border border-white/10 bg-white/[0.035] p-8 shadow-2xl"
         >
-          {/* Mobile logo */}
-          <div className="lg:hidden flex items-center gap-3 mb-10">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-teal-500
-                            flex items-center justify-center">
-              <Link2 size={18} className="text-white" />
-            </div>
-            <span className="font-display font-bold text-white text-xl">
-              Far<span className="text-primary-400">Chain</span>
-            </span>
-          </div>
-
-          {/* Título */}
           <div className="mb-8">
-            <h2 className="text-2xl font-bold text-white mb-1">
+            <h1 className="text-3xl font-black tracking-[-0.04em]">
               Acessar plataforma
-            </h2>
-            <p className="text-grafite-400 text-sm">
-              Use suas credenciais institucionais para entrar
+            </h1>
+            <p className="mt-2 text-sm text-grafite-400">
+              Use as credenciais de demonstração ou seu usuário institucional.
             </p>
           </div>
 
-          {/* Formulário */}
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
-
-            {/* E-mail */}
+          <form onSubmit={entrar} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-grafite-300 mb-1.5">
-                E-mail institucional
+              <label className="mb-2 block text-sm font-semibold text-grafite-300">
+                E-mail
               </label>
               <input
-                {...register('email')}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 type="email"
-                placeholder="usuario@sus.gov.br"
-                autoComplete="email"
-                className={`w-full px-4 py-3 rounded-xl text-sm text-white
-                            bg-grafite-800/80 border transition-all duration-200
-                            placeholder-grafite-500 focus:outline-none focus:ring-2
-                            ${errors.email
-                              ? 'border-danger-500 focus:ring-danger-500/20'
-                              : 'border-grafite-700 focus:border-primary-500 focus:ring-primary-500/20'
-                            }`}
+                className="w-full rounded-2xl border border-white/10 bg-[#080b13] px-4 py-4 text-sm outline-none transition focus:border-primary-400"
+                placeholder="admin@farchain.gov.br"
               />
-              {errors.email && (
-                <p className="mt-1.5 text-xs text-danger-400">{errors.email.message}</p>
-              )}
             </div>
 
-            {/* Senha */}
             <div>
-              <label className="block text-sm font-medium text-grafite-300 mb-1.5">
+              <label className="mb-2 block text-sm font-semibold text-grafite-300">
                 Senha
               </label>
               <div className="relative">
                 <input
-                  {...register('senha')}
+                  value={senha}
+                  onChange={(e) => setSenha(e.target.value)}
                   type={showSenha ? 'text' : 'password'}
-                  placeholder="••••••••••"
-                  autoComplete="current-password"
-                  className={`w-full px-4 py-3 pr-12 rounded-xl text-sm text-white
-                              bg-grafite-800/80 border transition-all duration-200
-                              placeholder-grafite-500 focus:outline-none focus:ring-2
-                              ${errors.senha
-                                ? 'border-danger-500 focus:ring-danger-500/20'
-                                : 'border-grafite-700 focus:border-primary-500 focus:ring-primary-500/20'
-                              }`}
+                  className="w-full rounded-2xl border border-white/10 bg-[#080b13] px-4 py-4 pr-12 text-sm outline-none transition focus:border-primary-400"
+                  placeholder="FarChain@2024"
                 />
                 <button
                   type="button"
-                  onClick={() => setShowSenha(!showSenha)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2
-                             text-grafite-500 hover:text-grafite-300 transition-colors"
-                  tabIndex={-1}
+                  onClick={() => setShowSenha((v) => !v)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-grafite-500 hover:text-white"
                 >
                   {showSenha ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
-              {errors.senha && (
-                <p className="mt-1.5 text-xs text-danger-400">{errors.senha.message}</p>
-              )}
             </div>
 
-            {/* Botão submit */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2.5
-                         px-6 py-3.5 rounded-xl font-semibold text-sm text-white
-                         bg-gradient-to-r from-primary-600 to-primary-500
-                         hover:from-primary-500 hover:to-primary-400
-                         shadow-lg shadow-primary-500/20
-                         transition-all duration-200
-                         disabled:opacity-60 disabled:cursor-not-allowed
-                         mt-2"
+              className="flex w-full items-center justify-center gap-3 rounded-2xl bg-primary-500 px-5 py-4 font-black text-white transition hover:bg-primary-400 disabled:opacity-60"
             >
               {loading ? (
                 <>
-                  <Loader2 size={18} className="animate-spin" />
+                  <Loader2 className="animate-spin" size={18} />
                   Autenticando...
                 </>
               ) : (
                 <>
-                  <LogIn size={18} />
-                  Entrar no Sistema
+                  Entrar no sistema
+                  <ArrowRight size={18} />
                 </>
               )}
             </button>
           </form>
 
-          {/* Demos */}
-          <div className="mt-8">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="flex-1 h-px bg-grafite-800" />
-              <p className="text-xs text-grafite-500 font-medium">
-                Acesso de demonstração
-              </p>
-              <div className="flex-1 h-px bg-grafite-800" />
-            </div>
-
-            <p className="text-[11px] text-grafite-600 mb-2.5 text-center">
-              Senha padrão: <span className="font-mono text-grafite-500">FarChain@2024</span>
-            </p>
-
-            <div className="grid grid-cols-2 gap-2">
-              {demos.map((d) => (
-                <button
-                  key={d.email}
-                  type="button"
-                  onClick={() => preencherDemo(d.email)}
-                  className="group flex flex-col items-start px-3.5 py-2.5 rounded-xl
-                             bg-grafite-800/60 border border-grafite-700/50
-                             hover:border-primary-500/40 hover:bg-primary-500/5
-                             transition-all duration-150 text-left"
-                >
-                  <span className="text-xs font-semibold text-white group-hover:text-primary-300
-                                   transition-colors">
-                    {d.label}
-                  </span>
-                  <span className="text-[10px] text-grafite-500 truncate w-full mt-0.5">
-                    {d.role}
-                  </span>
-                </button>
-              ))}
-            </div>
+          <div className="my-7 flex items-center gap-3">
+            <div className="h-px flex-1 bg-white/10" />
+            <span className="text-xs text-grafite-500">demonstração</span>
+            <div className="h-px flex-1 bg-white/10" />
           </div>
 
-          {/* Segurança */}
-          <div className="mt-8 flex items-center justify-center gap-2
-                          text-[11px] text-grafite-600">
-            <Lock size={11} />
-            <span>JWT · Argon2id · LGPD · Criptografia end-to-end</span>
+          <div className="grid grid-cols-2 gap-2">
+            {demos.map((d) => (
+              <button
+                key={d.email}
+                type="button"
+                onClick={() => preencherDemo(d.email)}
+                className="rounded-2xl border border-white/10 bg-white/[0.03] p-3 text-left transition hover:border-primary-400/60"
+              >
+                <p className="text-sm font-bold">{d.label}</p>
+                <p className="mt-1 truncate text-[10px] text-grafite-500">{d.role}</p>
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-7 flex items-center justify-center gap-2 text-xs text-grafite-500">
+            <Lock size={13} />
+            Senha padrão: FarChain@2024
           </div>
         </motion.div>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }
