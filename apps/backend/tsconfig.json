@@ -9,7 +9,6 @@
     "target": "ES2021",
     "sourceMap": true,
     "outDir": "./dist",
-    "baseUrl": "./",
     "incremental": true,
     "skipLibCheck": true,
     "strictNullChecks": true,
@@ -34,7 +33,7 @@
         "prisma/*"
       ]
     },
-    "ignoreDeprecations": "5.0"
+    "baseUrl": "."
   },
   "exclude": [
     "node_modules",
