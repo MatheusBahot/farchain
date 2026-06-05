@@ -3,7 +3,7 @@ services:
     name: farchain-api
     runtime: node
     plan: free
-    buildCommand: npm install -g pnpm@9.15.9 typescript@5.5.4 && pnpm install --no-frozen-lockfile && cd apps/backend && npx tsc -p tsconfig.build.json
+    buildCommand: npm install -g pnpm@9.15.9 @nestjs/cli && pnpm install --no-frozen-lockfile && pnpm --filter backend exec prisma generate && pnpm --filter backend exec prisma migrate deploy && cd apps/backend && nest build
     startCommand: cd apps/backend && node dist/main.js
     envVars:
       - key: NODE_VERSION
