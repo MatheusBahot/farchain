@@ -1,7 +1,6 @@
 [build]
-  base = "apps/frontend"
-  command = "pnpm install --no-frozen-lockfile && pnpm build"
-  publish = "dist"
+  command = "pnpm install --no-frozen-lockfile && cd apps/frontend && pnpm build"
+  publish = "apps/frontend/dist"
 
 [[redirects]]
   from = "/*"
