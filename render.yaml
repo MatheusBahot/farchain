@@ -3,8 +3,8 @@ services:
     name: farchain-api
     runtime: node
     plan: free
-    buildCommand: npm install -g pnpm@9.15.9 && pnpm install --no-frozen-lockfile && pnpm --filter backend build
-    startCommand: pnpm --filter backend start:prod
+    buildCommand: npm install -g pnpm@9.15.9 typescript@5.5.4 && pnpm install --no-frozen-lockfile && cd apps/backend && npx tsc -p tsconfig.build.json
+    startCommand: cd apps/backend && node dist/main.js
     envVars:
       - key: NODE_VERSION
         value: 20.18.1
