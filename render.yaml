@@ -4,11 +4,13 @@ services:
     runtime: node
     plan: free
     rootDir: .
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter backend build
-    startCommand: pnpm --filter backend start:prod
+    buildCommand: npx pnpm@9.15.9 install --frozen-lockfile && npx pnpm@9.15.9 --filter backend build
+    startCommand: npx pnpm@9.15.9 --filter backend start:prod
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NODE_VERSION
+        value: 20.18.1
       - key: PORT
         value: 3001
       - key: DATABASE_URL
